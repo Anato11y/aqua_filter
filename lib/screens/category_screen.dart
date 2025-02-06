@@ -34,17 +34,27 @@ class CategoryScreen extends StatelessWidget {
 
           return Padding(
             padding: const EdgeInsets.all(8.0),
-            child: GridView.builder(
-              itemCount: categories.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 0.75, // Пропорции карточки
-              ),
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                return CategoryCard(category: category);
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                double maxWidth = constraints.maxWidth;
+                double cardWidth = 180; // Фиксированная ширина карточки
+                int crossAxisCount = (maxWidth / cardWidth)
+                    .floor(); // Количество карточек в строке
+
+                return GridView.builder(
+                  itemCount: categories.length,
+                  gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent:
+                        cardWidth, // Фиксированная ширина карточки
+                    crossAxisSpacing: 10,
+                    mainAxisSpacing: 10,
+                    childAspectRatio: 0.75, // Пропорции карточки
+                  ),
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    return CategoryCard(category: category);
+                  },
+                );
               },
             ),
           );

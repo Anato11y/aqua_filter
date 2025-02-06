@@ -13,22 +13,21 @@ class MainScreen extends StatefulWidget {
 
 class MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
-
   late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _screens = [
-      const CategoryScreen(),
-      const CartScreen(),
-      const ProfileScreen(),
+      const CategoryScreen(), // Экран категорий
+      const CartScreen(), // Экран корзины
+      const ProfileScreen(), // Экран профиля
     ];
   }
 
   void _onItemTapped(int index) {
     setState(() {
-      _currentIndex = index; // 🔥 Обновляем индекс
+      _currentIndex = index; // Обновляем индекс
     });
   }
 
@@ -39,10 +38,10 @@ class MainScreenState extends State<MainScreen> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: _onItemTapped,
-        selectedItemColor: Colors.blue, // 🔥 Цвет активной кнопки
-        unselectedItemColor: Colors.grey, // 🔥 Цвет неактивных кнопок
-        showSelectedLabels: true, // Показываем текст активной кнопки
-        showUnselectedLabels: true, // Показываем текст неактивных кнопок
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.category),

@@ -2,12 +2,37 @@ import 'package:flutter/material.dart';
 import 'package:aqua_filter/widgets/product_card.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/models/product_model.dart';
-import 'package:aqua_filter/screens/product_detail_screen.dart'; // Экран деталей
+import 'package:aqua_filter/screens/product_detail_screen.dart';
+import 'package:aqua_filter/screens/cart_screen.dart';
+import 'package:aqua_filter/screens/category_screen.dart';
+import 'package:aqua_filter/screens/profile_screen.dart';
 
 class CatalogScreen extends StatelessWidget {
   final String categoryId;
 
   const CatalogScreen({super.key, required this.categoryId});
+
+  void _onItemTapped(BuildContext context, int index) {
+    Widget screen;
+    switch (index) {
+      case 0:
+        screen = const CategoryScreen();
+        break;
+      case 1:
+        screen = const CartScreen();
+        break;
+      case 2:
+        screen = const ProfileScreen();
+        break;
+      default:
+        return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => screen),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +44,7 @@ class CatalogScreen extends StatelessWidget {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('products')
-            .where('categoryId', isEqualTo: categoryId.toString())
+            .where('categoryId', isEqualTo: categoryId)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -35,7 +60,6 @@ class CatalogScreen extends StatelessWidget {
                 child: Text('В этой категории пока нет товаров'));
           }
 
-          // Преобразуем Firestore данные в список товаров
           final products = snapshot.data!.docs.map((doc) {
             return Product.fromMap(doc.data() as Map<String, dynamic>, doc.id);
           }).toList();
@@ -45,18 +69,16 @@ class CatalogScreen extends StatelessWidget {
             child: LayoutBuilder(
               builder: (context, constraints) {
                 double maxWidth = constraints.maxWidth;
-                double cardWidth = 200; // Фиксированная ширина карточки
-                int crossAxisCount = (maxWidth / cardWidth)
-                    .floor(); // Количество карточек в строке
+                double cardWidth = 200;
+                int crossAxisCount = (maxWidth / cardWidth).floor();
 
                 return GridView.builder(
                   itemCount: products.length,
                   gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent:
-                        cardWidth, // Фиксированная ширина карточки
+                    maxCrossAxisExtent: cardWidth,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.65, // Пропорции карточки
+                    childAspectRatio: 0.65,
                   ),
                   itemBuilder: (context, index) {
                     final product = products[index];
@@ -78,6 +100,28 @@ class CatalogScreen extends StatelessWidget {
             ),
           );
         },
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: 0, // Устанавливаем текущий индекс на категории
+        onTap: (index) => _onItemTapped(context, index),
+        selectedItemColor: Colors.blue,
+        unselectedItemColor: Colors.grey,
+        showSelectedLabels: true,
+        showUnselectedLabels: true,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.category),
+            label: 'Категории',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.shopping_cart),
+            label: 'Корзина',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'Профиль',
+          ),
+        ],
       ),
     );
   }

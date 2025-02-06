@@ -28,7 +28,8 @@ class CategoryCard extends StatelessWidget {
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
               child: AspectRatio(
-                aspectRatio: 10 / 8,
+                aspectRatio:
+                    10 / 8, // Изображение остается фиксированного размера
                 child: Container(
                   color: Colors.white,
                   child: category.imageUrl.isNotEmpty
@@ -57,8 +58,8 @@ class CategoryCard extends StatelessWidget {
                     style: const TextStyle(
                         fontSize: 14, fontWeight: FontWeight.bold),
                     textAlign: TextAlign.center,
-                    maxLines: 3, // Ограничиваем количество строк
-                    overflow: TextOverflow.ellipsis, // Добавляем многоточие
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ),
