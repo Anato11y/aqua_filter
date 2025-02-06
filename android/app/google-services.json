@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1026221178979",
+    "project_id": "aquafilter-25608",
+    "storage_bucket": "aquafilter-25608.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026221178979:android:38f62cbc2480881e497856",
+        "android_client_info": {
+          "package_name": "com.company.aquafilter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd9l0uOCpSDP4SpLcqKwJoJ4Lz5vrYOtY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1026221178979:android:97cbd7807f55a7fd497856",
+        "android_client_info": {
+          "package_name": "com.example.aqua_filter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd9l0uOCpSDP4SpLcqKwJoJ4Lz5vrYOtY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

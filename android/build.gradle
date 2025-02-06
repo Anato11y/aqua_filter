@@ -1,0 +1,40 @@
+buildscript {
+    ext.kotlin_version = '2.1.0' // ✅ Убедись, что Kotlin обновлён
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal() // ✅ Добавляем Gradle Plugin Portal
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.8.0' // ✅ Обновляем AGP (Android Gradle Plugin)
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version" // ✅ Совместимость с Kotlin
+        classpath 'com.google.gms:google-services:4.3.15' // ✅ Google Services
+    }
+}
+
+plugins {
+    id 'com.google.gms.google-services' version '4.3.15' apply false // ✅ Google Services
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+// ✅ Добавляем правильный путь к сборке
+rootProject.buildDir = "../build"
+
+subprojects {
+    project.buildDir = "${rootProject.buildDir}/${project.name}"
+}
+
+subprojects {
+    project.evaluationDependsOn(":app")
+}
+
+// ✅ Регистрация задачи `clean`
+tasks.register("clean", Delete) {
+    delete rootProject.buildDir
+}
