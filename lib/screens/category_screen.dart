@@ -10,7 +10,10 @@ class CategoryScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Категории товаров'),
+        title: const Text(
+          'Категории товаров',
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: const Color.fromARGB(255, 33, 150, 243),
       ),
       body: StreamBuilder<QuerySnapshot>(
