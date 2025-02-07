@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
+import 'package:aqua_filter/models/product_list.dart';
+import 'package:aqua_filter/models/product_model.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -11,8 +13,9 @@ class CartScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Корзина'),
+        title: const Text('Корзина', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -30,7 +33,18 @@ class CartScreen extends StatelessWidget {
                       final productId =
                           cartProvider.items.keys.elementAt(index);
                       final quantity = cartProvider.items[productId]!;
-                      final product = cartProvider.getProductById(productId);
+                      final product = productList.firstWhere(
+                        (p) => p.id == productId,
+                        orElse: () => Product(
+                          id: productId,
+                          name: 'Неизвестный товар',
+                          description: 'Описание отсутствует',
+                          price: 0.0,
+                          imageUrl: '',
+                          characteristics: [],
+                          categoryId: '',
+                        ),
+                      );
 
                       return ListTile(
                         leading: product.imageUrl.isNotEmpty
@@ -81,6 +95,36 @@ class CartScreen extends StatelessWidget {
                   style: const TextStyle(fontSize: 18, color: Colors.green),
                 ),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: cartProvider.items.isNotEmpty
+                    ? () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Заказ оформлен!'),
+                          ),
+                        );
+                        cartProvider.clearCart();
+                      }
+                    : null,
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  backgroundColor: cartProvider.items.isNotEmpty
+                      ? Colors.blueAccent
+                      : Colors.grey,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade300,
+                ),
+                child: const Text(
+                  'Оформить заказ',
+                  style: TextStyle(fontSize: 18),
+                ),
+              ),
             ),
           ),
         ],

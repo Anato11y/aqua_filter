@@ -4,7 +4,7 @@ import 'package:aqua_filter/models/product_model.dart';
 import 'package:aqua_filter/models/product_list.dart';
 
 class CartProvider with ChangeNotifier {
-  final Cart _cart = Cart(); // ✅ Используем внутренний объект корзины
+  final Cart _cart = Cart(); // Используем внутренний объект корзины
 
   // ✅ Добавление товара в корзину
   void addItem(Product product, int quantity) {
@@ -37,7 +37,7 @@ class CartProvider with ChangeNotifier {
       });
 
   // ✅ Получение списка товаров в корзине
-  Map<String, int> get items => _cart.items;
+  Map<String, int> get items => Map.unmodifiable(_cart.items);
 
   // ✅ Метод для получения продукта по его ID
   Product getProductById(String productId) {

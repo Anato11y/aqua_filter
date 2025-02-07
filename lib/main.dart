@@ -1,3 +1,4 @@
+import 'package:aqua_filter/providers/user_provider.dart';
 import 'package:aqua_filter/screens/onboarding_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
@@ -24,6 +25,8 @@ class AquaFilterApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(
             create: (_) => CartProvider()), // Добавляем CartProvider
+        ChangeNotifierProvider(
+            create: (_) => UserProvider()), // ✅ Добавляем UserProvider
       ],
       child: MaterialApp(
         title: 'AquaFilter',

@@ -1,5 +1,8 @@
+import 'package:aqua_filter/screens/login_screen.dart';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:aqua_filter/screens/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,16 +24,24 @@ class SplashScreenState extends State<SplashScreen>
     _animation = Tween<double>(begin: 0, end: 1).animate(_controller);
     _controller.forward();
 
-    Future.delayed(const Duration(seconds: 3), () {
-      if (context.mounted) {
-        // Проверяем, не был ли уничтожен экран
-        Navigator.pushReplacement(
-          // ignore: use_build_context_synchronously
-          context,
-          MaterialPageRoute(builder: (context) => const LoginScreen()),
-        );
-      }
-    });
+    _checkUserAuthStatus(); // ✅ Проверяем авторизацию
+  }
+
+  /// Проверяет, авторизован ли пользователь
+  void _checkUserAuthStatus() async {
+    await Future.delayed(const Duration(seconds: 2)); // Анимация заставки
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => user != null
+              ? const HomeScreen()
+              : const AuthScreen(), // ✅ Переключение на нужный экран
+        ),
+      );
+    }
   }
 
   @override
