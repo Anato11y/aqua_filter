@@ -4,8 +4,14 @@ import 'package:aqua_filter/models/product_model.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
+  final VoidCallback onAddToCart; // Новое свойство для добавления в корзину
 
-  const ProductCard({super.key, required this.product, required this.onTap});
+  const ProductCard({
+    super.key,
+    required this.product,
+    required this.onTap,
+    required this.onAddToCart, // Инициализация нового свойства
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,13 +22,12 @@ class ProductCard extends StatelessWidget {
         elevation: 4,
         child: Column(
           children: [
-            // 🔹 Фиксированное изображение
+            // 🔹 Изображение товара
             ClipRRect(
               borderRadius:
                   const BorderRadius.vertical(top: Radius.circular(12)),
               child: AspectRatio(
-                aspectRatio:
-                    10 / 8, // Пропорции изображения остаются неизменными
+                aspectRatio: 10 / 8,
                 child: Container(
                   color: Colors.white,
                   child: product.imageUrl.isNotEmpty
@@ -41,7 +46,7 @@ class ProductCard extends StatelessWidget {
                 ),
               ),
             ),
-            // 🔹 Фиксированная зона текста
+            // 🔹 Информация о товаре
             Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
@@ -59,6 +64,21 @@ class ProductCard extends StatelessWidget {
                   Text(
                     '${product.price.toStringAsFixed(2)} ₽',
                     style: const TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                  const SizedBox(height: 8),
+                  // 🔹 Кнопка "Добавить в корзину"
+                  ElevatedButton(
+                    onPressed: onAddToCart,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text(
+                      'Добавить в корзину',
+                      style: TextStyle(color: Colors.white),
+                    ),
                   ),
                 ],
               ),

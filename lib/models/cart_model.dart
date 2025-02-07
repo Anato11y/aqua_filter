@@ -1,6 +1,5 @@
-import 'package:aqua_filter/models/product_list.dart';
-import 'package:flutter/foundation.dart'; // Импортируем ChangeNotifier
-import 'product_model.dart'; // Импортируем модель продукта
+import 'package:flutter/foundation.dart';
+import 'product_model.dart';
 
 class Cart with ChangeNotifier {
   final Map<String, int> _items = {}; // Приватное хранилище товаров
@@ -8,17 +7,18 @@ class Cart with ChangeNotifier {
   // Геттер для получения содержимого корзины
   Map<String, int> get items => Map.unmodifiable(_items);
 
-  // Метод для добавления товара в корзину
-  void addItem(Product product) {
+  // ✅ Метод для добавления товара в корзину с указанием количества
+  void addItem(Product product, int quantity) {
     if (_items.containsKey(product.id)) {
-      _items.update(product.id!, (quantity) => quantity + 1);
+      _items.update(
+          product.id, (existingQuantity) => existingQuantity + quantity);
     } else {
-      _items[product.id!] = 1;
+      _items[product.id] = quantity;
     }
-    notifyListeners(); // Уведомляем слушателей о изменении состояния
+    notifyListeners(); // 🔥 Уведомляем UI об изменениях
   }
 
-  // Метод для удаления одного товара из корзины
+  // ✅ Метод для удаления одного товара из корзины
   void removeItem(String productId) {
     if (_items.containsKey(productId)) {
       if (_items[productId]! > 1) {
@@ -27,29 +27,12 @@ class Cart with ChangeNotifier {
         _items.remove(productId);
       }
     }
-    notifyListeners(); // Уведомляем слушателей о изменении состояния
+    notifyListeners();
   }
 
-  // Метод для полного удаления товара из корзины
-  void removeAll(String productId) {
-    _items.remove(productId);
-    notifyListeners(); // Уведомляем слушателей о изменении состояния
-  }
-
-  // Метод для расчета общей стоимости
-  double calculateTotal() {
-    double total = 0;
-    for (final entry in _items.entries) {
-      // Предполагается, что есть список продуктов productList
-      final product = productList.firstWhere((p) => p.id == entry.key);
-      total += product.price * entry.value;
-    }
-    return total;
-  }
-
-  // Очистка корзины
+  // ✅ Очистка корзины
   void clear() {
     _items.clear();
-    notifyListeners(); // Уведомляем слушателей о изменении состояния
+    notifyListeners();
   }
 }

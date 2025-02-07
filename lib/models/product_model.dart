@@ -1,4 +1,6 @@
 // models/product.dart
+import 'package:aqua_filter/models/product_list.dart';
+
 class Product {
   final String id;
   final String name;
@@ -27,7 +29,7 @@ class Product {
       'price': price,
       'imageUrl': imageUrl,
       'characteristics': characteristics,
-      'categoryId': categoryId, // Добавлено поле categoryId
+      'categoryId': categoryId,
     };
   }
 
@@ -36,44 +38,49 @@ class Product {
     return Product(
       id: documentId,
       name: map['name'] ?? 'Без названия',
-      categoryId: map['categoryId']?.toString() ?? '',
+      categoryId: map['categoryId']?.toString() ?? 'unknown', // ✅ Исправлено
       imageUrl: map['imageUrl'] ?? 'https://via.placeholder.com/200',
-      price: (map['price'] is num)
-          ? (map['price'] as num).toDouble()
-          : double.tryParse(map['price'].toString()) ?? 0.0,
+      price: parsePrice(map['price']),
       description: map['description'] ?? 'Описание отсутствует',
       characteristics: _parseCharacteristics(map['characteristics']),
     );
   }
 
-// Функция для корректного парсинга `characteristics`
+  // Функция для корректного парсинга `characteristics`
   static List<String> _parseCharacteristics(dynamic characteristics) {
-    if (characteristics == null) {
-      return []; // Если null, возвращаем пустой список
-    }
-
-    if (characteristics is List) {
-      return List<String>.from(
-          characteristics); // Если это уже List<String>, просто возвращаем
-    } else if (characteristics is Map<String, dynamic>) {
+    if (characteristics == null) return [];
+    if (characteristics is List) return List<String>.from(characteristics);
+    if (characteristics is Map<String, dynamic>) {
       return characteristics.entries
           .map((e) => "${e.key}: ${e.value}")
           .toList();
-      // Преобразуем Map в List<String>
     }
-
-    return []; // Если формат неизвестен, возвращаем пустой список
+    return [];
   }
 
-// Метод для обработки цены (если в Firestore она записана строкой)
+  // Метод для обработки цены (если в Firestore она записана строкой)
   static double parsePrice(dynamic price) {
-    if (price is num) {
-      return price.toDouble(); // Если уже число, вернуть как есть
-    }
+    if (price is num) return price.toDouble();
     if (price is String) {
       return double.tryParse(price.replaceAll(" ", "").replaceAll(",", ".")) ??
           0.0;
     }
     return 0.0;
   }
+}
+
+// Функция получения товара по ID
+Product getProductById(String productId, String categoryId) {
+  return productList.firstWhere(
+    (product) => product.id == productId,
+    orElse: () => Product(
+      id: productId,
+      name: 'Неизвестный товар',
+      description: 'Описание отсутствует',
+      price: 0.0,
+      imageUrl: '',
+      characteristics: [],
+      categoryId: categoryId, // ✅ Теперь передаётся корректно
+    ),
+  );
 }

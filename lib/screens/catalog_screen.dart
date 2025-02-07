@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:aqua_filter/widgets/product_card.dart';
+import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:aqua_filter/widgets/product_card.dart';
 import 'package:aqua_filter/models/product_model.dart';
 import 'package:aqua_filter/screens/product_detail_screen.dart';
 import 'package:aqua_filter/screens/cart_screen.dart';
 import 'package:aqua_filter/screens/category_screen.dart';
 import 'package:aqua_filter/screens/profile_screen.dart';
+import 'package:aqua_filter/providers/cart_provider.dart';
 
 class CatalogScreen extends StatelessWidget {
   final String categoryId;
@@ -96,6 +98,17 @@ class CatalogScreen extends StatelessWidget {
                           ),
                         );
                       },
+                      onAddToCart: () {
+                        final cartProvider =
+                            Provider.of<CartProvider>(context, listen: false);
+                        cartProvider.addItem(
+                            product, 1); // ✅ Добавили количество
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${product.name} добавлен в корзину'),
+                          ),
+                        );
+                      },
                     );
                   },
                 );
@@ -105,7 +118,7 @@ class CatalogScreen extends StatelessWidget {
         },
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 0, // Устанавливаем текущий индекс на категории
+        currentIndex: 0,
         onTap: (index) => _onItemTapped(context, index),
         selectedItemColor: Colors.blue,
         unselectedItemColor: Colors.grey,

@@ -1,62 +1,70 @@
-import 'package:aqua_filter/models/cart_model.dart';
-import 'package:aqua_filter/models/product_list.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:aqua_filter/providers/cart_provider.dart';
 
-class CartScreen extends StatefulWidget {
+class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
 
   @override
-  CartScreenState createState() => CartScreenState();
-}
-
-class CartScreenState extends State<CartScreen> {
-  final Cart cart = Cart();
-
-  @override
   Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Корзина'),
+        backgroundColor: Colors.blueAccent,
       ),
       body: Column(
         children: [
           Expanded(
-            child: ListView.builder(
-              itemCount: cart.items.keys.length,
-              itemBuilder: (context, index) {
-                final productId = cart.items.keys.elementAt(index);
-                final product =
-                    productList.firstWhere((p) => p.id == productId);
-                final quantity = cart.items[productId]!;
-                return ListTile(
-                  leading: Image.asset(product.imageUrl, width: 50, height: 50),
-                  title: Text(product.name),
-                  subtitle:
-                      Text('${product.price.toStringAsFixed(2)} ₽ x $quantity'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.remove),
-                        onPressed: () {
-                          setState(() {
-                            cart.removeItem(productId);
-                          });
-                        },
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.add),
-                        onPressed: () {
-                          setState(() {
-                            cart.addItem(product);
-                          });
-                        },
-                      ),
-                    ],
+            child: cartProvider.items.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Ваша корзина пуста',
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  )
+                : ListView.builder(
+                    itemCount: cartProvider.items.length,
+                    itemBuilder: (context, index) {
+                      final productId =
+                          cartProvider.items.keys.elementAt(index);
+                      final quantity = cartProvider.items[productId]!;
+                      final product = cartProvider.getProductById(productId);
+
+                      return ListTile(
+                        leading: product.imageUrl.isNotEmpty
+                            ? Image.network(
+                                product.imageUrl,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.image_not_supported),
+                        title: Text(product.name),
+                        subtitle: Text(
+                            '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove),
+                              onPressed: () {
+                                cartProvider.removeItem(product.id);
+                              },
+                            ),
+                            Text('$quantity'),
+                            IconButton(
+                              icon: const Icon(Icons.add),
+                              onPressed: () {
+                                cartProvider.addItem(product, 1);
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
           const Divider(),
           Padding(
@@ -69,7 +77,7 @@ class CartScreenState extends State<CartScreen> {
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 Text(
-                  '${cart.calculateTotal().toStringAsFixed(2)} ₽',
+                  '${cartProvider.totalAmount.toStringAsFixed(2)} ₽',
                   style: const TextStyle(fontSize: 18, color: Colors.green),
                 ),
               ],
