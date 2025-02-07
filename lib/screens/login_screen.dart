@@ -1,7 +1,8 @@
-import 'package:aqua_filter/screens/main_scrin.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-// Главный экран
+import 'package:provider/provider.dart';
+import 'package:aqua_filter/screens/main_scrin.dart';
+import 'package:aqua_filter/providers/user_provider.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -18,6 +19,7 @@ class AuthScreenState extends State<AuthScreen> {
   bool _isLoading = false;
   bool _isLogin = true;
 
+  /// ✅ Метод аутентификации (вход/регистрация)
   Future<void> _authAction() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -30,19 +32,25 @@ class AuthScreenState extends State<AuthScreen> {
         await _auth.createUserWithEmailAndPassword(
             email: _email, password: _password);
       }
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
-      );
+
+      // ✅ После успешного входа обновляем состояние пользователя в `UserProvider`
+      if (mounted) {
+        Provider.of<UserProvider>(context, listen: false).refreshUser();
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const MainScreen()),
+        );
+      }
     } on FirebaseAuthException catch (e) {
-      _showErrorDialog(context, e.code);
+      _showErrorDialog(e.code);
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _showErrorDialog(BuildContext context, String errorCode) {
+  /// ✅ Диалог ошибки авторизации
+  void _showErrorDialog(String errorCode) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -61,6 +69,7 @@ class AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  /// ✅ Расшифровка ошибок Firebase Auth
   String _parseFirebaseError(String code) {
     switch (code) {
       case 'invalid-email':
@@ -130,6 +139,7 @@ class AuthScreenState extends State<AuthScreen> {
     );
   }
 
+  /// ✅ Упрощенный метод для стилизации полей ввода
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,

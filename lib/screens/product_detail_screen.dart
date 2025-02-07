@@ -1,226 +1,209 @@
-import 'package:aqua_filter/models/product_model.dart';
-import 'package:aqua_filter/screens/cart_screen.dart'; // Импортируем CartScreen
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:aqua_filter/models/product_model.dart';
+import 'package:aqua_filter/providers/cart_provider.dart';
+import 'package:aqua_filter/screens/cart_screen.dart';
 
-class ProductDetailScreen extends StatefulWidget {
+class ProductDetailScreen extends StatelessWidget {
   final Product product;
+
   const ProductDetailScreen({super.key, required this.product});
 
-  @override
-  ProductDetailScreenState createState() => ProductDetailScreenState();
-}
+  /// ✅ Метод для выбора количества перед добавлением в корзину
+  void _showQuantitySelector(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    int quantity = 1; // Начальное количество
 
-class ProductDetailScreenState extends State<ProductDetailScreen> {
-  int quantity = 0; // ✅ Изначально 0
-
-  void _increaseQuantity() {
-    setState(() {
-      quantity++;
-    });
-  }
-
-  void _decreaseQuantity() {
-    if (quantity > 0) {
-      setState(() {
-        quantity--;
-      });
-    }
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${product.price.toStringAsFixed(2)} ₽',
+                    style: const TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: quantity > 1
+                            ? () => setState(() => quantity--)
+                            : null,
+                        icon: const Icon(Icons.remove, color: Colors.red),
+                      ),
+                      Text(
+                        '$quantity',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => quantity++),
+                        icon: const Icon(Icons.add, color: Colors.green),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      cartProvider.addItem(product, quantity);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              '$quantity × ${product.name} добавлен в корзину'),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 30),
+                    ),
+                    child: const Text('Добавить в корзину',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final cartProvider = Provider.of<CartProvider>(context);
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          widget.product.name,
-          style: TextStyle(color: Colors.white),
-        ),
-        backgroundColor: Colors.blueAccent,
+        title: Text(product.name, style: const TextStyle(color: Colors.white)),
+        backgroundColor: const Color.fromARGB(255, 33, 150, 243),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
-          // Добавляем иконку корзины справа
-          IconButton(
-            icon: const Icon(Icons.shopping_cart,
-                color: Colors.white), // Иконка корзины
-            onPressed: () {
-              // Переход на экран CartScreen
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) =>
-                      const CartScreen(), // Открываем CartScreen
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8), // Отступ для лучшего визуального оформления
-        ],
-      ),
-      body: Column(
-        children: [
-          // Контент прокручиваемый
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Изображение
-                    Center(
-                      child: Image.network(
-                        widget.product.imageUrl,
-                        height: 250,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(child: Text('Ошибка изображения')),
-                        loadingBuilder: (context, child, loadingProgress) {
-                          if (loadingProgress == null) return child;
-                          return const Center(
-                              child: CircularProgressIndicator());
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Название
-                    Text(
-                      widget.product.name,
-                      style: const TextStyle(
-                          fontSize: 22, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    // Описание
-                    Text(
-                      widget.product.description,
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                    const SizedBox(height: 16),
-                    // Цена
-                    Text(
-                      'Цена: ${widget.product.price} ₽',
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 16),
-                    // Характеристики
-                    if (widget.product.characteristics.isNotEmpty)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Характеристики:',
-                            style: TextStyle(
-                                fontSize: 18, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 8),
-                          ..._buildCharacteristics(
-                              widget.product.characteristics),
-                        ],
-                      ),
-                  ],
-                ),
+          Stack(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.shopping_cart, color: Colors.white),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CartScreen()),
+                  );
+                },
               ),
-            ),
-          ),
-          // Закреплённая панель управления (НЕ скроллится)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                    color: Colors.black12, blurRadius: 6, spreadRadius: 2),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Выбор количества
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Количество:",
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              if (cartProvider.totalItems > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
                     ),
-                    Row(
-                      children: [
-                        IconButton(
-                          onPressed: _decreaseQuantity,
-                          icon: const Icon(Icons.remove, size: 28),
-                        ),
-                        Text(
-                          '$quantity',
-                          style: const TextStyle(
-                              fontSize: 18, fontWeight: FontWeight.bold),
-                        ),
-                        IconButton(
-                          onPressed: _increaseQuantity,
-                          icon: const Icon(Icons.add, size: 28),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                // Кнопка "Добавить в корзину"
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: quantity > 0
-                        ? () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                    '${widget.product.name} добавлен в корзину ($quantity шт.)'),
-                                duration: const Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        : null, // Кнопка неактивна, если quantity = 0
-                    icon: const Icon(Icons.shopping_cart),
-                    label: const Text('Добавить в корзину'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor:
-                          quantity > 0 ? Colors.blueAccent : Colors.grey,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: Colors.grey.shade300,
+                    child: Text(
+                      cartProvider.totalItems.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
-              ],
-            ),
+            ],
           ),
         ],
       ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Image.network(
+                product.imageUrl,
+                height: 200,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Center(child: Text('Ошибка загрузки изображения')),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              product.name,
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              '${product.price.toStringAsFixed(2)} ₽',
+              style: const TextStyle(fontSize: 18, color: Colors.green),
+            ),
+            const SizedBox(height: 10),
+            Text(product.description,
+                style: const TextStyle(fontSize: 16, color: Colors.black54)),
+            const SizedBox(height: 20),
+            // 🔹 Блок характеристик товара
+            if (product.characteristics.isNotEmpty) ...[
+              const Text(
+                'Характеристики:',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 10),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: product.characteristics
+                    .map((char) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.check, color: Colors.blueAccent),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  char,
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 20),
+            ],
+            Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  _showQuantitySelector(context);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                ),
+                child: const Text('Добавить в корзину',
+                    style: TextStyle(color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
-  }
-
-  /// Метод для отображения характеристик
-  List<Widget> _buildCharacteristics(dynamic characteristics) {
-    if (characteristics is Map<String, dynamic>) {
-      return characteristics.entries.map((entry) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(
-            '${entry.key}: ${entry.value}',
-            style: const TextStyle(fontSize: 16),
-          ),
-        );
-      }).toList();
-    } else if (characteristics is List<dynamic>) {
-      return characteristics.map((char) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 2),
-          child: Text(
-            '• $char',
-            style: const TextStyle(fontSize: 16),
-          ),
-        );
-      }).toList();
-    }
-    return [const Text('Нет характеристик', style: TextStyle(fontSize: 16))];
   }
 }

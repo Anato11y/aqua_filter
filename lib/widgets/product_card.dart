@@ -4,13 +4,13 @@ import 'package:aqua_filter/models/product_model.dart';
 class ProductCard extends StatelessWidget {
   final Product product;
   final VoidCallback onTap;
-  final VoidCallback onAddToCart; // Новое свойство для добавления в корзину
+  final VoidCallback onAddToCart; // ✅ Добавляем параметр
 
   const ProductCard({
     super.key,
     required this.product,
     required this.onTap,
-    required this.onAddToCart, // Инициализация нового свойства
+    required this.onAddToCart, // ✅ Объявляем параметр
   });
 
   @override
@@ -68,7 +68,7 @@ class ProductCard extends StatelessWidget {
                   const SizedBox(height: 8),
                   // 🔹 Кнопка "Добавить в корзину"
                   ElevatedButton(
-                    onPressed: onAddToCart,
+                    onPressed: onAddToCart, // ✅ Используем переданный параметр
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueAccent,
                       shape: RoundedRectangleBorder(

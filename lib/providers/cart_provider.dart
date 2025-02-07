@@ -1,57 +1,47 @@
 import 'package:flutter/foundation.dart';
-import 'package:aqua_filter/models/cart_model.dart';
 import 'package:aqua_filter/models/product_model.dart';
-import 'package:aqua_filter/models/product_list.dart';
 
 class CartProvider with ChangeNotifier {
-  final Cart _cart = Cart(); // Используем внутренний объект корзины
+  final Map<Product, int> _cartItems = {}; // ✅ Хранит товары в корзине
+
+  // ✅ Геттер для получения товаров
+  Map<Product, int> get items => Map.unmodifiable(_cartItems);
 
   // ✅ Добавление товара в корзину
   void addItem(Product product, int quantity) {
-    if (quantity > 0) {
-      _cart.addItem(product, quantity);
-      notifyListeners(); // 🔥 Обновляем UI
+    if (_cartItems.containsKey(product)) {
+      _cartItems.update(
+          product, (existingQuantity) => existingQuantity + quantity);
+    } else {
+      _cartItems[product] = quantity;
     }
+    notifyListeners();
   }
 
   // ✅ Удаление товара из корзины
-  void removeItem(String productId) {
-    _cart.removeItem(productId);
+  void removeItem(Product product) {
+    if (_cartItems.containsKey(product)) {
+      if (_cartItems[product]! > 1) {
+        _cartItems.update(product, (quantity) => quantity - 1);
+      } else {
+        _cartItems.remove(product);
+      }
+    }
     notifyListeners();
   }
 
-  // ✅ Очистка всей корзины
+  // ✅ Очистка корзины
   void clearCart() {
-    _cart.clear();
+    _cartItems.clear();
     notifyListeners();
   }
-
-  // ✅ Получение общего количества товаров в корзине
-  int get totalItems =>
-      _cart.items.values.fold(0, (sum, quantity) => sum + quantity);
 
   // ✅ Получение суммы всех товаров в корзине
-  double get totalAmount => _cart.items.entries.fold(0, (sum, entry) {
-        final product = getProductById(entry.key);
-        return sum + (product.price * entry.value);
+  double get totalAmount => _cartItems.entries.fold(0, (sum, entry) {
+        return sum + (entry.key.price * entry.value);
       });
 
-  // ✅ Получение списка товаров в корзине
-  Map<String, int> get items => Map.unmodifiable(_cart.items);
-
-  // ✅ Метод для получения продукта по его ID
-  Product getProductById(String productId) {
-    return productList.firstWhere(
-      (product) => product.id == productId,
-      orElse: () => Product(
-        id: productId,
-        name: 'Неизвестный товар',
-        description: 'Описание отсутствует',
-        price: 0.0,
-        imageUrl: '',
-        characteristics: [],
-        categoryId: '',
-      ),
-    );
-  }
+  // ✅ Получение общего количества товаров
+  int get totalItems =>
+      _cartItems.values.fold(0, (sum, quantity) => sum + quantity);
 }

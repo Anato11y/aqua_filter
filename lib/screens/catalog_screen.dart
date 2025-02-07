@@ -36,6 +36,82 @@ class CatalogScreen extends StatelessWidget {
     );
   }
 
+  /// ✅ Метод для выбора количества товара перед добавлением в корзину
+  void _showQuantitySelector(BuildContext context, Product product) {
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    int quantity = 1; // Начальное количество
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    product.name,
+                    style: const TextStyle(
+                        fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    '${product.price.toStringAsFixed(2)} ₽',
+                    style: const TextStyle(fontSize: 16, color: Colors.green),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        onPressed: quantity > 1
+                            ? () => setState(() => quantity--)
+                            : null,
+                        icon: const Icon(Icons.remove, color: Colors.red),
+                      ),
+                      Text(
+                        '$quantity',
+                        style: const TextStyle(fontSize: 20),
+                      ),
+                      IconButton(
+                        onPressed: () => setState(() => quantity++),
+                        icon: const Icon(Icons.add, color: Colors.green),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: () {
+                      cartProvider.addItem(product, quantity);
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              '$quantity × ${product.name} добавлен в корзину'),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 12, horizontal: 30),
+                    ),
+                    child: const Text('Добавить в корзину',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -44,7 +120,8 @@ class CatalogScreen extends StatelessWidget {
           'Каталог категории',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: const Color.fromARGB(255, 33, 150, 243),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -99,15 +176,7 @@ class CatalogScreen extends StatelessWidget {
                         );
                       },
                       onAddToCart: () {
-                        final cartProvider =
-                            Provider.of<CartProvider>(context, listen: false);
-                        cartProvider.addItem(
-                            product, 1); // ✅ Добавили количество
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('${product.name} добавлен в корзину'),
-                          ),
-                        );
+                        _showQuantitySelector(context, product);
                       },
                     );
                   },
