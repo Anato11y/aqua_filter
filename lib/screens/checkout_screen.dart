@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
+import 'package:aqua_filter/models/product_model.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -61,17 +62,25 @@ class CheckoutScreenState extends State<CheckoutScreen> {
               child: ListView.builder(
                 itemCount: cartProvider.items.length,
                 itemBuilder: (context, index) {
-                  final product = cartProvider.items.keys.elementAt(index);
-                  final quantity = cartProvider.items[product]!;
+                  final String productId =
+                      cartProvider.items.keys.elementAt(index);
+                  final Map<String, dynamic> cartItem =
+                      cartProvider.items[productId]!;
+                  final Product product =
+                      cartItem['product']; // ✅ Теперь это объект `Product`
+                  final int quantity = cartItem['quantity'];
 
                   return ListTile(
-                    leading: Image.network(
-                      product.imageUrl,
-                      width: 50,
-                      height: 50,
-                      fit: BoxFit.cover,
-                    ),
-                    title: Text(product.name),
+                    leading: product.imageUrl.isNotEmpty
+                        ? Image.network(
+                            product.imageUrl,
+                            width: 50,
+                            height: 50,
+                            fit: BoxFit.cover,
+                          )
+                        : const Icon(Icons.image_not_supported),
+                    title:
+                        Text(product.name), // ✅ Теперь `product.name` работает
                     subtitle: Text(
                         '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
                   );

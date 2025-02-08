@@ -1,9 +1,9 @@
-import 'package:aqua_filter/screens/login_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
-
+import 'package:aqua_filter/models/product_model.dart';
+import 'package:aqua_filter/screens/login_screen.dart';
 import 'package:aqua_filter/screens/checkout_screen.dart'; // Страница оформления заказа
 
 class CartScreen extends StatelessWidget {
@@ -50,8 +50,13 @@ class CartScreen extends StatelessWidget {
                 : ListView.builder(
                     itemCount: cartProvider.items.length,
                     itemBuilder: (context, index) {
-                      final product = cartProvider.items.keys.elementAt(index);
-                      final quantity = cartProvider.items[product]!;
+                      final String productId =
+                          cartProvider.items.keys.elementAt(index);
+                      final Map<String, dynamic> cartItem =
+                          cartProvider.items[productId]!;
+                      final Product product =
+                          cartItem['product']; // ✅ Получаем объект `Product`
+                      final int quantity = cartItem['quantity'];
 
                       return ListTile(
                         leading: product.imageUrl.isNotEmpty
@@ -62,7 +67,8 @@ class CartScreen extends StatelessWidget {
                                 fit: BoxFit.cover,
                               )
                             : const Icon(Icons.image_not_supported),
-                        title: Text(product.name),
+                        title: Text(
+                            product.name), // ✅ Теперь `product.name` работает
                         subtitle: Text(
                             '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
                         trailing: Row(
@@ -71,7 +77,7 @@ class CartScreen extends StatelessWidget {
                             IconButton(
                               icon: const Icon(Icons.remove),
                               onPressed: () {
-                                cartProvider.removeItem(product);
+                                cartProvider.removeItem(product.id);
                               },
                             ),
                             Text('$quantity'),

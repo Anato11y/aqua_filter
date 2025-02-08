@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/widgets/product_card.dart';
 import 'package:aqua_filter/models/product_model.dart';
@@ -7,7 +6,6 @@ import 'package:aqua_filter/screens/product_detail_screen.dart';
 import 'package:aqua_filter/screens/cart_screen.dart';
 import 'package:aqua_filter/screens/category_screen.dart';
 import 'package:aqua_filter/screens/profile_screen.dart';
-import 'package:aqua_filter/providers/cart_provider.dart';
 
 class CatalogScreen extends StatelessWidget {
   final String categoryId;
@@ -33,82 +31,6 @@ class CatalogScreen extends StatelessWidget {
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(builder: (context) => screen),
-    );
-  }
-
-  /// ✅ Метод для выбора количества товара перед добавлением в корзину
-  void _showQuantitySelector(BuildContext context, Product product) {
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    int quantity = 1; // Начальное количество
-
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${product.price.toStringAsFixed(2)} ₽',
-                    style: const TextStyle(fontSize: 16, color: Colors.green),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: quantity > 1
-                            ? () => setState(() => quantity--)
-                            : null,
-                        icon: const Icon(Icons.remove, color: Colors.red),
-                      ),
-                      Text(
-                        '$quantity',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                      IconButton(
-                        onPressed: () => setState(() => quantity++),
-                        icon: const Icon(Icons.add, color: Colors.green),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      cartProvider.addItem(product, quantity);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '$quantity × ${product.name} добавлен в корзину'),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 30),
-                    ),
-                    child: const Text('Добавить в корзину',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
     );
   }
 
@@ -160,7 +82,7 @@ class CatalogScreen extends StatelessWidget {
                     maxCrossAxisExtent: cardWidth,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.65,
+                    childAspectRatio: 0.45, // Увеличил высоту для кнопок
                   ),
                   itemBuilder: (context, index) {
                     final product = products[index];
@@ -174,9 +96,6 @@ class CatalogScreen extends StatelessWidget {
                                 ProductDetailScreen(product: product),
                           ),
                         );
-                      },
-                      onAddToCart: () {
-                        _showQuantitySelector(context, product);
                       },
                     );
                   },
