@@ -4,85 +4,43 @@ import 'package:aqua_filter/models/product_model.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
 import 'package:aqua_filter/screens/cart_screen.dart';
 
-class ProductDetailScreen extends StatelessWidget {
+class ProductDetailScreen extends StatefulWidget {
   final Product product;
 
   const ProductDetailScreen({super.key, required this.product});
 
-  /// ✅ Метод для выбора количества перед добавлением в корзину
-  void _showQuantitySelector(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
-    int quantity = 1; // Начальное количество
+  @override
+  ProductDetailScreenState createState() => ProductDetailScreenState();
+}
 
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    product.name,
-                    style: const TextStyle(
-                        fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${product.price.toStringAsFixed(2)} ₽',
-                    style: const TextStyle(fontSize: 16, color: Colors.green),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      IconButton(
-                        onPressed: quantity > 1
-                            ? () => setState(() => quantity--)
-                            : null,
-                        icon: const Icon(Icons.remove, color: Colors.red),
-                      ),
-                      Text(
-                        '$quantity',
-                        style: const TextStyle(fontSize: 20),
-                      ),
-                      IconButton(
-                        onPressed: () => setState(() => quantity++),
-                        icon: const Icon(Icons.add, color: Colors.green),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () {
-                      cartProvider.addItem(product, quantity);
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                              '$quantity × ${product.name} добавлен в корзину'),
-                        ),
-                      );
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
-                      padding: const EdgeInsets.symmetric(
-                          vertical: 12, horizontal: 30),
-                    ),
-                    child: const Text('Добавить в корзину',
-                        style: TextStyle(color: Colors.white)),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
+class ProductDetailScreenState extends State<ProductDetailScreen> {
+  int quantity = 0; // 🔹 Изначальное количество
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    quantity = (cartProvider.items[widget.product.id]?['quantity'] ?? 0) as int;
+  }
+
+  /// ✅ Уменьшение количества
+  void _decreaseQuantity() {
+    if (quantity > 0) {
+      setState(() {
+        quantity--;
+      });
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      cartProvider.removeItem(widget.product.id);
+    }
+  }
+
+  /// ✅ Увеличение количества
+  void _increaseQuantity() {
+    setState(() {
+      quantity++;
+    });
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.addItem(widget.product, 1);
   }
 
   @override
@@ -91,7 +49,8 @@ class ProductDetailScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(product.name, style: const TextStyle(color: Colors.white)),
+        title: Text(widget.product.name,
+            style: const TextStyle(color: Colors.white)),
         backgroundColor: const Color.fromARGB(255, 33, 150, 243),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -130,77 +89,119 @@ class ProductDetailScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Image.network(
-                product.imageUrl,
-                height: 200,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) =>
-                    const Center(child: Text('Ошибка загрузки изображения')),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              product.name,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              '${product.price.toStringAsFixed(2)} ₽',
-              style: const TextStyle(fontSize: 18, color: Colors.green),
-            ),
-            const SizedBox(height: 10),
-            Text(product.description,
-                style: const TextStyle(fontSize: 16, color: Colors.black54)),
-            const SizedBox(height: 20),
-            // 🔹 Блок характеристик товара
-            if (product.characteristics.isNotEmpty) ...[
-              const Text(
-                'Характеристики:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: product.characteristics
-                    .map((char) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.check, color: Colors.blueAccent),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  char,
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ))
-                    .toList(),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Image.network(
+                  widget.product.imageUrl,
+                  height: 200,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) =>
+                      const Center(child: Text('Ошибка загрузки изображения')),
+                ),
               ),
               const SizedBox(height: 20),
-            ],
-            Center(
-              child: ElevatedButton(
-                onPressed: () {
-                  _showQuantitySelector(context);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  padding:
-                      const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
-                ),
-                child: const Text('Добавить в корзину',
-                    style: TextStyle(color: Colors.white)),
+              Text(
+                widget.product.name,
+                style:
+                    const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-            ),
+              const SizedBox(height: 10),
+              Text(
+                '${widget.product.price.toStringAsFixed(2)} ₽',
+                style: const TextStyle(fontSize: 18, color: Colors.green),
+              ),
+              const SizedBox(height: 10),
+              Text(widget.product.description,
+                  style: const TextStyle(fontSize: 16, color: Colors.black54)),
+              const SizedBox(height: 20),
+
+              // 🔹 Блок характеристик товара
+              if (widget.product.characteristics.isNotEmpty) ...[
+                const Text(
+                  'Характеристики:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 10),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: widget.product.characteristics
+                      .map((char) => Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.check,
+                                    color: Colors.blueAccent),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: Text(
+                                    char,
+                                    style: const TextStyle(fontSize: 16),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ))
+                      .toList(),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          border: Border(
+            top: BorderSide(color: Colors.grey.shade300, width: 1),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // 🔹 Кнопки изменения количества товара
+            if (quantity > 0)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    onPressed: _decreaseQuantity,
+                    icon: const Icon(Icons.remove, color: Colors.red),
+                  ),
+                  Text(
+                    '$quantity',
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                  IconButton(
+                    onPressed: _increaseQuantity,
+                    icon: const Icon(Icons.add, color: Colors.green),
+                  ),
+                ],
+              )
+            else
+              SizedBox(
+                width: MediaQuery.of(context).size.width *
+                    0.8, // 80% ширины экрана
+                child: ElevatedButton(
+                  onPressed: _increaseQuantity,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)), // Закругление
+                  ),
+                  child: const Text(
+                    'В КОРЗИНУ',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

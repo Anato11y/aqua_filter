@@ -1,25 +1,37 @@
-class User {
-  final String? email; // Email пользователя
-  final String? name; // Имя пользователя
-  final int? bonusBalance; // Баланс бонусов (добавляем это поле)
-  final List<Purchase> purchaseHistory; // История покупок
+class UserModel {
+  final String id;
+  final String name;
+  final String email;
+  double bonusBalance;
+  List<Map<String, dynamic>> orderHistory;
 
-  User({
-    this.email,
-    this.name,
-    this.bonusBalance, // Добавляем bonusBalance как необязательное поле
-    this.purchaseHistory = const [],
+  UserModel({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.bonusBalance = 0.0,
+    this.orderHistory = const [],
   });
-}
 
-class Purchase {
-  final String productName; // Название товара
-  final double price; // Цена товара
-  final DateTime date; // Дата покупки
+  // 🔹 Конвертация в JSON
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'name': name,
+      'email': email,
+      'bonusBalance': bonusBalance,
+      'orderHistory': orderHistory,
+    };
+  }
 
-  Purchase({
-    required this.productName,
-    required this.price,
-    required this.date,
-  });
+  // 🔹 Создание объекта из JSON
+  factory UserModel.fromMap(Map<String, dynamic> map) {
+    return UserModel(
+      id: map['id'] ?? '',
+      name: map['name'] ?? '',
+      email: map['email'] ?? '',
+      bonusBalance: map['bonusBalance']?.toDouble() ?? 0.0,
+      orderHistory: List<Map<String, dynamic>>.from(map['orderHistory'] ?? []),
+    );
+  }
 }

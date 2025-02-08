@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
-import 'package:aqua_filter/models/product_model.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -16,25 +17,73 @@ class CheckoutScreenState extends State<CheckoutScreen> {
   String _phone = '';
   String _address = '';
 
-  /// ✅ Метод оформления заказа
-  void _submitOrder(BuildContext context) {
+  /// ✅ Метод оформления заказа (теперь данные идут в `orders`)
+  Future<void> _submitOrder(BuildContext context) async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final user = FirebaseAuth.instance.currentUser;
 
-    if (_formKey.currentState!.validate()) {
-      _formKey.currentState!.save();
+    if (user == null) {
+      // ❌ Если не авторизован, отправляем на страницу входа
+      Navigator.pushReplacementNamed(context, '/login');
+      return;
+    }
 
-      // 🔹 Отправка заказа (будущая интеграция с сервером или Firebase)
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Заказ успешно оформлен!'),
-        ),
-      );
+    if (!_formKey.currentState!.validate()) return;
+    _formKey.currentState!.save();
 
-      // 🔹 Очищаем корзину после успешного заказа
+    // 🔹 Считаем сумму заказа
+    double totalAmount = cartProvider.totalAmount;
+    double bonusEarned = totalAmount * 0.05; // 5% бонусов
+
+    // 🔹 Формируем данные заказа
+    Map<String, dynamic> orderData = {
+      'userId': user.uid,
+      'name': _name, // ✅ Теперь имя сохраняется
+      'phone': _phone,
+      'address': _address,
+      'totalAmount': totalAmount,
+      'bonusEarned': bonusEarned,
+      'date': FieldValue.serverTimestamp(),
+      'items': cartProvider.items.entries.map((entry) {
+        return {
+          'productId': entry.key,
+          'name': entry.value['product'].name,
+          'price': entry.value['product'].price,
+          'quantity': entry.value['quantity'],
+        };
+      }).toList(),
+    };
+
+    try {
+      // ✅ Сохраняем заказ в `orders`
+      final orderRef =
+          await FirebaseFirestore.instance.collection('orders').add(orderData);
+      print('✅ Заказ успешно сохранен в orders/${orderRef.id}');
+
+      // ✅ Обновляем баланс бонусов пользователя в `users`
+      final userRef =
+          FirebaseFirestore.instance.collection('users').doc(user.uid);
+      await userRef.set({
+        'bonusBalance': FieldValue.increment(bonusEarned),
+      }, SetOptions(merge: true));
+
+      print('✅ Бонусы обновлены: +$bonusEarned');
+
+      // 🔹 Очищаем корзину после оформления заказа
       cartProvider.clearCart();
+
+      // 🔹 Показываем успешное сообщение
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заказ успешно оформлен!')),
+      );
 
       // 🔹 Возвращаем пользователя на главную страницу
       Navigator.pop(context);
+    } catch (e) {
+      print('❌ Ошибка оформления заказа: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Ошибка оформления заказа: $e')),
+      );
     }
   }
 
@@ -62,25 +111,19 @@ class CheckoutScreenState extends State<CheckoutScreen> {
               child: ListView.builder(
                 itemCount: cartProvider.items.length,
                 itemBuilder: (context, index) {
-                  final String productId =
-                      cartProvider.items.keys.elementAt(index);
-                  final Map<String, dynamic> cartItem =
-                      cartProvider.items[productId]!;
-                  final Product product =
-                      cartItem['product']; // ✅ Теперь это объект `Product`
-                  final int quantity = cartItem['quantity'];
+                  final productId = cartProvider.items.keys.elementAt(index);
+                  final cartItem = cartProvider.items[productId]!;
+                  final product = cartItem['product'];
+                  final quantity = cartItem['quantity'];
 
                   return ListTile(
-                    leading: product.imageUrl.isNotEmpty
-                        ? Image.network(
-                            product.imageUrl,
-                            width: 50,
-                            height: 50,
-                            fit: BoxFit.cover,
-                          )
-                        : const Icon(Icons.image_not_supported),
-                    title:
-                        Text(product.name), // ✅ Теперь `product.name` работает
+                    leading: Image.network(
+                      product.imageUrl,
+                      width: 50,
+                      height: 50,
+                      fit: BoxFit.cover,
+                    ),
+                    title: Text(product.name),
                     subtitle: Text(
                         '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
                   );
@@ -124,11 +167,14 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
-                    width: double.infinity,
+                    width: MediaQuery.of(context).size.width *
+                        0.8, // 80% ширины экрана
                     child: ElevatedButton(
                       onPressed: () => _submitOrder(context),
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
                         backgroundColor: Colors.blueAccent,
                       ),
                       child: const Text(

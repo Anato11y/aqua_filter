@@ -82,7 +82,7 @@ class CatalogScreen extends StatelessWidget {
                     maxCrossAxisExtent: cardWidth,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.45, // Увеличил высоту для кнопок
+                    childAspectRatio: 0.60, // Увеличил высоту для кнопок
                   ),
                   itemBuilder: (context, index) {
                     final product = products[index];

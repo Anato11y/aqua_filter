@@ -21,12 +21,10 @@ class ProductCardState extends State<ProductCard> {
   int quantity = 0; // 🔹 Изначальное количество
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
-
-    // ✅ Преобразуем Object в int
-    quantity = (cartProvider.items[widget.product] ?? 0) as int;
+    quantity = (cartProvider.items[widget.product.id]?['quantity'] ?? 0) as int;
   }
 
   /// ✅ Метод уменьшения количества
@@ -35,6 +33,8 @@ class ProductCardState extends State<ProductCard> {
       setState(() {
         quantity--;
       });
+      final cartProvider = Provider.of<CartProvider>(context, listen: false);
+      cartProvider.removeItem(widget.product.id);
     }
   }
 
@@ -43,11 +43,13 @@ class ProductCardState extends State<ProductCard> {
     setState(() {
       quantity++;
     });
+    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    cartProvider.addItem(widget.product, 1);
   }
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context, listen: false);
+    final cartProvider = Provider.of<CartProvider>(context);
 
     return GestureDetector(
       onTap: widget.onTap,
@@ -82,7 +84,7 @@ class ProductCardState extends State<ProductCard> {
                 widget.product.name,
                 style:
                     const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                maxLines: 2,
+                maxLines: 3,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.center,
               ),
@@ -92,51 +94,39 @@ class ProductCardState extends State<ProductCard> {
                 style: const TextStyle(fontSize: 16, color: Colors.green),
               ),
               const SizedBox(height: 8),
-              // 🔹 Выбор количества
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  IconButton(
-                    onPressed: quantity > 0 ? _decreaseQuantity : null,
-                    icon: Icon(Icons.remove,
-                        color: quantity > 0 ? Colors.red : Colors.grey),
+              // 🔹 Отображаем количество товара, если он уже в корзине
+              if (quantity > 0)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      onPressed: _decreaseQuantity,
+                      icon: const Icon(Icons.remove, color: Colors.red),
+                    ),
+                    Text(
+                      '$quantity',
+                      style: const TextStyle(fontSize: 18),
+                    ),
+                    IconButton(
+                      onPressed: _increaseQuantity,
+                      icon: const Icon(Icons.add, color: Colors.green),
+                    ),
+                  ],
+                )
+              else
+                ElevatedButton(
+                  onPressed: _increaseQuantity,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blueAccent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
-                  Text(
-                    '$quantity',
-                    style: const TextStyle(fontSize: 18),
-                  ),
-                  IconButton(
-                    onPressed: _increaseQuantity,
-                    icon: const Icon(Icons.add, color: Colors.green),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: quantity > 0
-                    ? () {
-                        cartProvider.addItem(widget.product, quantity);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                '$quantity × ${widget.product.name} добавлен в корзину'),
-                          ),
-                        );
-                      }
-                    : null, // 🔹 Кнопка отключается при `quantity = 0`
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: quantity > 0
-                      ? Colors.blueAccent
-                      : Colors.grey, // 🔹 Цвет меняется
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
+                  child: const Text(
+                    'В КОРЗИНУ',
+                    style: TextStyle(color: Colors.white),
                   ),
                 ),
-                child: const Text(
-                  'Добавить в корзину',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
             ],
           ),
         ),

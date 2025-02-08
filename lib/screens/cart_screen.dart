@@ -113,7 +113,8 @@ class CartScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
-              width: double.infinity,
+              width:
+                  MediaQuery.of(context).size.width * 0.8, // 80% ширины экрана
               child: ElevatedButton(
                 onPressed: cartProvider.items.isNotEmpty
                     ? () => _checkout(context)
@@ -125,6 +126,8 @@ class CartScreen extends StatelessWidget {
                       : Colors.grey,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade300,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)), // Закругление
                 ),
                 child: const Text(
                   'Оформить заказ',
