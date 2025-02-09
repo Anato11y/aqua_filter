@@ -31,39 +31,39 @@ class ProfileScreen extends StatelessWidget {
         title:
             const Text('Личный кабинет', style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: FutureBuilder<DocumentSnapshot>(
-        future:
-            FirebaseFirestore.instance.collection('users').doc(user.uid).get(),
-        builder: (context, userSnapshot) {
-          if (userSnapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // ✅ Загружаем данные профиля пользователя
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(user.uid)
+                .get(),
+            builder: (context, userSnapshot) {
+              if (userSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-            return const Center(child: Text('Ошибка загрузки данных профиля'));
-          }
+              if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                print('❌ Ошибка: Данные профиля не найдены в `users`');
+                return const Center(
+                    child: Text('Ошибка загрузки данных профиля'));
+              }
 
-          final userData =
-              userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
-          final bonusBalance =
-              (userData['bonusBalance'] as num?)?.toDouble() ?? 0.0;
-          final displayName = userData['displayName'] ?? 'Имя не указано';
+              final userData =
+                  userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+              final bonusBalance =
+                  (userData['bonusBalance'] as num?)?.toDouble() ?? 0.0;
+              final displayName = userData['displayName'] ?? 'Имя не указано';
 
-          // ✅ Загружаем историю заказов из `orderHistory`
-          final orderHistory = (userData['orderHistory'] as List<dynamic>?)
-                  ?.cast<Map<String, dynamic>>() ??
-              [];
+              print('✅ Данные пользователя загружены: $userData');
 
-          print('✅ Данные пользователя загружены: $userData');
-          print('📦 История заказов: $orderHistory');
-
-          return Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
+              return Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -86,45 +86,76 @@ class ProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'История заказов:',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Expanded(
-                  child: orderHistory.isEmpty
-                      ? const Center(child: Text('У вас пока нет заказов'))
-                      : ListView.builder(
-                          itemCount: orderHistory.length,
-                          itemBuilder: (context, index) {
-                            final order = orderHistory[index];
-                            final totalAmount = order['totalAmount'] ?? 0;
-                            final bonusEarned = order['bonusEarned'] ?? 0;
-                            final orderDate = order['date'] != null
-                                ? (order['date'] as Timestamp)
-                                    .toDate()
-                                    .toString()
-                                : 'Дата неизвестна';
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(vertical: 8),
-                              child: ListTile(
-                                title: Text('Заказ на сумму: ${totalAmount} ₽'),
-                                subtitle:
-                                    Text('Бонусы начислены: ${bonusEarned} ₽'),
-                                trailing: Text(orderDate),
-                                onTap: () {
-                                  _showOrderDetails(context, order);
-                                },
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ],
+              );
+            },
+          ),
+          const SizedBox(height: 20),
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'История заказов:',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-          );
-        },
+          ),
+          // ✅ Загружаем историю заказов
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance
+                  .collection('orders')
+                  .where('userId',
+                      isEqualTo: user.uid) // 🔹 Загружаем заказы по `userId`
+                  .orderBy('date', descending: true) // 🔹 Сортируем по дате
+                  .snapshots(),
+              builder: (context, orderSnapshot) {
+                if (orderSnapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (orderSnapshot.hasError) {
+                  print('❌ Ошибка загрузки заказов: ${orderSnapshot.error}');
+                  return const Center(child: Text('Ошибка загрузки заказов'));
+                }
+
+                if (!orderSnapshot.hasData ||
+                    orderSnapshot.data!.docs.isEmpty) {
+                  print('⚠️ Нет заказов для пользователя ${user.uid}');
+                  return const Center(child: Text('У вас пока нет заказов'));
+                }
+
+                final orders = orderSnapshot.data!.docs;
+
+                print(
+                    '✅ Найдено ${orders.length} заказов для пользователя ${user.uid}');
+
+                return ListView.builder(
+                  itemCount: orders.length,
+                  itemBuilder: (context, index) {
+                    final order = orders[index].data() as Map<String, dynamic>;
+                    final orderId = orders[index].id;
+                    final totalAmount = order['totalAmount'] ?? 0;
+                    final bonusEarned = order['bonusEarned'] ?? 0;
+                    final orderDate = order['date'] != null
+                        ? (order['date'] as Timestamp).toDate().toString()
+                        : 'Дата неизвестна';
+
+                    return Card(
+                      margin: const EdgeInsets.symmetric(
+                          vertical: 8, horizontal: 16),
+                      child: ListTile(
+                        title: Text('Заказ #$orderId - ${totalAmount} ₽'),
+                        subtitle: Text('Бонусы начислены: ${bonusEarned} ₽'),
+                        trailing: Text(orderDate),
+                        onTap: () {
+                          _showOrderDetails(context, order);
+                        },
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

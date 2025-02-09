@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
+import 'package:aqua_filter/screens/login_screen.dart';
 
 class CheckoutScreen extends StatefulWidget {
   const CheckoutScreen({super.key});
@@ -17,73 +18,76 @@ class CheckoutScreenState extends State<CheckoutScreen> {
   String _phone = '';
   String _address = '';
 
-  /// ✅ Метод оформления заказа (теперь данные идут в `orders`)
+  /// ✅ **Метод проверки авторизации**
+  Future<bool> _checkAuth() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      print('❌ Пользователь не авторизован! Перенаправляем на `AuthScreen`.');
+      await Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const AuthScreen()),
+      );
+
+      return FirebaseAuth.instance.currentUser != null;
+    }
+    return true;
+  }
+
+  /// ✅ **Метод оформления заказа**
   Future<void> _submitOrder(BuildContext context) async {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
-      // ❌ Если не авторизован, отправляем на страницу входа
-      Navigator.pushReplacementNamed(context, '/login');
+      print('❌ Ошибка: Оформление заказа без авторизации невозможно.');
       return;
     }
 
-    if (!_formKey.currentState!.validate()) return;
-    _formKey.currentState!.save();
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
 
-    // 🔹 Считаем сумму заказа
-    double totalAmount = cartProvider.totalAmount;
-    double bonusEarned = totalAmount * 0.05; // 5% бонусов
+      double totalAmount = cartProvider.totalAmount;
+      double bonusEarned = totalAmount * 0.05; // 5% от суммы заказа
 
-    // 🔹 Формируем данные заказа
-    Map<String, dynamic> orderData = {
-      'userId': user.uid,
-      'name': _name, // ✅ Теперь имя сохраняется
-      'phone': _phone,
-      'address': _address,
-      'totalAmount': totalAmount,
-      'bonusEarned': bonusEarned,
-      'date': FieldValue.serverTimestamp(),
-      'items': cartProvider.items.entries.map((entry) {
-        return {
-          'productId': entry.key,
-          'name': entry.value['product'].name,
-          'price': entry.value['product'].price,
-          'quantity': entry.value['quantity'],
-        };
-      }).toList(),
-    };
+      final orderData = {
+        'userId': user.uid,
+        'name': _name,
+        'phone': _phone,
+        'address': _address,
+        'totalAmount': totalAmount,
+        'bonusEarned': bonusEarned,
+        'date': Timestamp.now(),
+        'items': cartProvider.items.values.map((item) {
+          return {
+            'name': item['product'].name,
+            'productId': item['product'].id,
+            'price': item['product'].price,
+            'quantity': item['quantity'],
+          };
+        }).toList(),
+      };
 
-    try {
-      // ✅ Сохраняем заказ в `orders`
       final orderRef =
           await FirebaseFirestore.instance.collection('orders').add(orderData);
-      print('✅ Заказ успешно сохранен в orders/${orderRef.id}');
+      print('✅ Заказ сохранён в `orders/${orderRef.id}`');
 
-      // ✅ Обновляем баланс бонусов пользователя в `users`
       final userRef =
           FirebaseFirestore.instance.collection('users').doc(user.uid);
-      await userRef.set({
-        'bonusBalance': FieldValue.increment(bonusEarned),
-      }, SetOptions(merge: true));
+      final userData = await userRef.get();
+      double currentBonus =
+          (userData['bonusBalance'] as num?)?.toDouble() ?? 0.0;
+      double newBonusBalance = currentBonus + bonusEarned;
 
-      print('✅ Бонусы обновлены: +$bonusEarned');
+      await userRef.update({'bonusBalance': newBonusBalance});
+      print('✅ Бонусы обновлены: +$bonusEarned (Итого: $newBonusBalance)');
 
-      // 🔹 Очищаем корзину после оформления заказа
       cartProvider.clearCart();
 
-      // 🔹 Показываем успешное сообщение
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заказ успешно оформлен!')),
+        SnackBar(content: Text('Заказ успешно оформлен!')),
       );
 
-      // 🔹 Возвращаем пользователя на главную страницу
       Navigator.pop(context);
-    } catch (e) {
-      print('❌ Ошибка оформления заказа: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка оформления заказа: $e')),
-      );
     }
   }
 
@@ -96,6 +100,7 @@ class CheckoutScreenState extends State<CheckoutScreen> {
         title: const Text('Оформление заказа',
             style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -111,10 +116,10 @@ class CheckoutScreenState extends State<CheckoutScreen> {
               child: ListView.builder(
                 itemCount: cartProvider.items.length,
                 itemBuilder: (context, index) {
-                  final productId = cartProvider.items.keys.elementAt(index);
-                  final cartItem = cartProvider.items[productId]!;
-                  final product = cartItem['product'];
-                  final quantity = cartItem['quantity'];
+                  final product =
+                      cartProvider.items.values.elementAt(index)['product'];
+                  final quantity =
+                      cartProvider.items.values.elementAt(index)['quantity'];
 
                   return ListTile(
                     leading: Image.network(
@@ -122,6 +127,8 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                       width: 50,
                       height: 50,
                       fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.image_not_supported),
                     ),
                     title: Text(product.name),
                     subtitle: Text(
@@ -167,10 +174,13 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                   const SizedBox(height: 20),
                   SizedBox(
-                    width: MediaQuery.of(context).size.width *
-                        0.8, // 80% ширины экрана
+                    width: MediaQuery.of(context).size.width * 0.8,
                     child: ElevatedButton(
-                      onPressed: () => _submitOrder(context),
+                      onPressed: () async {
+                        if (await _checkAuth()) {
+                          _submitOrder(context);
+                        }
+                      },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 12),
                         shape: RoundedRectangleBorder(
@@ -192,3 +202,5 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     );
   }
 }
+
+/////////////////////

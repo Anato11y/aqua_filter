@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/screens/main_scrin.dart';
-import 'package:aqua_filter/providers/user_provider.dart';
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
@@ -13,13 +12,14 @@ class AuthScreen extends StatefulWidget {
 
 class AuthScreenState extends State<AuthScreen> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final _formKey = GlobalKey<FormState>();
   String _email = '';
   String _password = '';
+  String _name = ''; // 🔹 Теперь запрашиваем имя пользователя
   bool _isLoading = false;
   bool _isLogin = true;
 
-  /// ✅ Метод аутентификации (вход/регистрация)
   Future<void> _authAction() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -29,19 +29,21 @@ class AuthScreenState extends State<AuthScreen> {
         await _auth.signInWithEmailAndPassword(
             email: _email, password: _password);
       } else {
-        await _auth.createUserWithEmailAndPassword(
-            email: _email, password: _password);
-      }
-
-      // ✅ После успешного входа обновляем состояние пользователя в `UserProvider`
-      if (mounted) {
-        Provider.of<UserProvider>(context, listen: false).refreshUser();
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const MainScreen()),
+        UserCredential userCredential =
+            await _auth.createUserWithEmailAndPassword(
+          email: _email,
+          password: _password,
         );
+
+        User? user = userCredential.user;
+        if (user != null) {
+          await _createUserInFirestore(user);
+        }
       }
+
+      if (!mounted) return;
+      Navigator.pushReplacement(
+          context, MaterialPageRoute(builder: (context) => const MainScreen()));
     } on FirebaseAuthException catch (e) {
       _showErrorDialog(e.code);
     } finally {
@@ -49,7 +51,21 @@ class AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  /// ✅ Диалог ошибки авторизации
+  /// ✅ **Метод для добавления нового пользователя в `users`**
+  Future<void> _createUserInFirestore(User user) async {
+    try {
+      await _firestore.collection('users').doc(user.uid).set({
+        'email': user.email,
+        'displayName': _name,
+        'bonusBalance': 0.0,
+        'orderHistory': [],
+      });
+      print('✅ Новый пользователь добавлен в Firestore: ${user.uid}');
+    } catch (e) {
+      print('❌ Ошибка при создании пользователя в Firestore: $e');
+    }
+  }
+
   void _showErrorDialog(String errorCode) {
     showDialog(
       context: context,
@@ -69,7 +85,6 @@ class AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  /// ✅ Расшифровка ошибок Firebase Auth
   String _parseFirebaseError(String code) {
     switch (code) {
       case 'invalid-email':
@@ -99,6 +114,14 @@ class AuthScreenState extends State<AuthScreen> {
             children: [
               const Icon(Icons.account_circle, size: 80, color: Colors.blue),
               const SizedBox(height: 30),
+              if (!_isLogin)
+                TextFormField(
+                  decoration: _inputDecoration('Имя', Icons.person),
+                  validator: (v) =>
+                      v != null && v.isNotEmpty ? null : 'Введите имя',
+                  onChanged: (v) => _name = v,
+                ),
+              const SizedBox(height: 20),
               TextFormField(
                 decoration: _inputDecoration('Email', Icons.email),
                 keyboardType: TextInputType.emailAddress,
@@ -122,10 +145,15 @@ class AuthScreenState extends State<AuthScreen> {
                   backgroundColor: Colors.blueAccent,
                   padding:
                       const EdgeInsets.symmetric(vertical: 12, horizontal: 30),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)), // Закругление
                 ),
                 child: _isLoading
                     ? const CircularProgressIndicator(color: Colors.white)
-                    : Text(_isLogin ? 'Войти' : 'Зарегистрироваться'),
+                    : Text(
+                        _isLogin ? 'Войти' : 'Зарегистрироваться',
+                        style: const TextStyle(color: Colors.white),
+                      ),
               ),
               TextButton(
                 onPressed: () => setState(() => _isLogin = !_isLogin),
@@ -139,7 +167,6 @@ class AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  /// ✅ Упрощенный метод для стилизации полей ввода
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
