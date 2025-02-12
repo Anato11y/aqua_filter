@@ -49,7 +49,7 @@ class ProductCardState extends State<ProductCard> {
 
   @override
   Widget build(BuildContext context) {
-    final cartProvider = Provider.of<CartProvider>(context);
+    Provider.of<CartProvider>(context);
 
     return GestureDetector(
       onTap: widget.onTap,
