@@ -6,6 +6,8 @@ import 'package:aqua_filter/screens/product_detail_screen.dart';
 import 'package:aqua_filter/screens/cart_screen.dart';
 import 'package:aqua_filter/screens/category_screen.dart';
 import 'package:aqua_filter/screens/profile_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:aqua_filter/providers/filter_provider.dart';
 
 class CatalogScreen extends StatelessWidget {
   final String categoryId;
@@ -36,6 +38,9 @@ class CatalogScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final filterProvider = Provider.of<FilterProvider>(context);
+    final waterAnalysis = filterProvider.waterAnalysis;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -66,6 +71,23 @@ class CatalogScreen extends StatelessWidget {
 
           final products = snapshot.data!.docs.map((doc) {
             return Product.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          }).where((product) {
+            double efficiency = product.efficiency;
+            double systemPerformance = waterAnalysis.systemPerformance;
+
+            // 🔹 Фильтрация товаров по производительности
+            if (categoryId == 'Установки ионообменные') {
+              print(
+                  '❌  systemPerformance($categoryId) ($systemPerformance) > efficiency ($efficiency)');
+              if (systemPerformance > efficiency ||
+                  efficiency > systemPerformance * 1.5) {
+                print(
+                    '❌ Товар скрыт: systemPerformance ($systemPerformance) > efficiency ($efficiency)');
+
+                return false;
+              }
+            }
+            return true;
           }).toList();
 
           return Padding(

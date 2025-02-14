@@ -1,18 +1,20 @@
-import 'package:flutter/material.dart';
-import 'package:aqua_filter/models/product_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:aqua_filter/models/product_model.dart';
 
 class CartProvider with ChangeNotifier {
   final Map<String, Map<String, dynamic>> _items = {};
 
   Map<String, Map<String, dynamic>> get items => _items;
 
-  /// ✅ Подсчет общего количества товаров в корзине
-  int get totalItems => _items.values
-      .fold(0, (sum, item) => sum + (item['quantity'] as num).toInt());
+  /// Подсчет общего количества товаров в корзине
+  int get totalItems => _items.values.fold(
+        0,
+        (sum, item) => sum + (item['quantity'] as num).toInt(),
+      );
 
-  /// ✅ Подсчет общей суммы заказа
+  /// Подсчет общей суммы заказа
   double get totalAmount => _items.entries.fold(
         0,
         (sum, entry) =>
@@ -21,7 +23,7 @@ class CartProvider with ChangeNotifier {
                 (entry.value['quantity'] as num).toInt()),
       );
 
-  /// ✅ Исправленный метод добавления товара в корзину
+  /// Добавление товара в корзину
   void addItem(Product product, int quantity) {
     if (_items.containsKey(product.id)) {
       _items[product.id]!['quantity'] =
@@ -35,7 +37,7 @@ class CartProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  /// ✅ Удаление товара
+  /// Удаление товара
   void removeItem(String productId) {
     if (_items.containsKey(productId)) {
       if ((_items[productId]!['quantity'] as num).toInt() > 1) {
@@ -48,25 +50,33 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  /// ✅ Очистка корзины
+  /// Очистка корзины
   void clearCart() {
     _items.clear();
     notifyListeners();
   }
 
-  /// ✅ **Метод оформления заказа**
+  /// Проверка наличия товаров из категории в корзине
+  bool isCategoryInCart(String categoryId) {
+    return _items.values.any((item) {
+      final product = item['product'] as Product;
+      return product.categoryId == categoryId; // Сравниваем ID категории
+    });
+  }
+
+  /// Метод оформления заказа
   Future<void> placeOrder() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final totalPrice = totalAmount;
-    final bonusEarned = totalPrice * 0.05; // 🔹 5% бонусов
+    final bonusEarned = totalPrice * 0.05; // 5% бонусов
 
     final orderData = {
       'userId': user.uid,
       'totalAmount': totalPrice,
       'bonusEarned': bonusEarned,
-      'date': Timestamp.now(),
+      'date': DateTime.now().millisecondsSinceEpoch,
       'items': _items.values.map((item) {
         return {
           'productId': item['product'].id,
@@ -77,11 +87,11 @@ class CartProvider with ChangeNotifier {
       }).toList(),
     };
 
-    // 🔹 Сохранение заказа в Firestore
+    // Сохранение заказа в Firestore
     final orderRef = FirebaseFirestore.instance.collection('orders').doc();
     await orderRef.set(orderData);
 
-    // 🔹 Обновляем бонусный баланс пользователя
+    // Обновляем бонусный баланс пользователя
     final userRef =
         FirebaseFirestore.instance.collection('users').doc(user.uid);
     final userData = await userRef.get();

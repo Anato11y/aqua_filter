@@ -43,6 +43,9 @@ class WaterAnalysis {
     this.wellDepth,
   });
 
+  // 🔹 Пороговое значение для фильтрации ионообменных установок
+  static const double hardnessThreshold = 3.0;
+
   /// ✅ **Фабрика для создания объекта по умолчанию (нормы ПДК)**
   factory WaterAnalysis.defaultValues() {
     return WaterAnalysis(

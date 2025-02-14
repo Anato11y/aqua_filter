@@ -1,5 +1,4 @@
 // models/product.dart
-import 'package:aqua_filter/models/product_list.dart';
 
 class Product {
   final String id;
@@ -9,6 +8,8 @@ class Product {
   final String imageUrl;
   final List<String> characteristics;
   final String categoryId;
+  final double efficiency;
+  bool isHidden; // 🔹 Добавляем флаг
 
   Product({
     required this.id,
@@ -18,6 +19,8 @@ class Product {
     required this.imageUrl,
     required this.characteristics,
     required this.categoryId,
+    required this.efficiency,
+    this.isHidden = false, // 🔹 По умолчанию товар видимый
   });
 
   // Преобразование в Map для Firestore
@@ -43,6 +46,8 @@ class Product {
       price: parsePrice(map['price']),
       description: map['description'] ?? 'Описание отсутствует',
       characteristics: _parseCharacteristics(map['characteristics']),
+      efficiency: (map['efficiency'] as num?)?.toDouble() ?? 0.0,
+      isHidden: map['isHidden'] ?? false, // 🔹 Загружаем из Firestore
     );
   }
 
@@ -67,20 +72,4 @@ class Product {
     }
     return 0.0;
   }
-}
-
-// Функция получения товара по ID
-Product getProductById(String productId, String categoryId) {
-  return productList.firstWhere(
-    (product) => product.id == productId,
-    orElse: () => Product(
-      id: productId,
-      name: 'Неизвестный товар',
-      description: 'Описание отсутствует',
-      price: 0.0,
-      imageUrl: '',
-      characteristics: [],
-      categoryId: categoryId, // ✅ Теперь передаётся корректно
-    ),
-  );
 }
