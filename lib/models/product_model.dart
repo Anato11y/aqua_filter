@@ -9,6 +9,8 @@ class Product {
   final List<String> characteristics;
   final String categoryId;
   final double efficiency;
+  final double mixQuantity;
+
   bool isHidden; // 🔹 Добавляем флаг
 
   Product({
@@ -20,6 +22,7 @@ class Product {
     required this.characteristics,
     required this.categoryId,
     required this.efficiency,
+    required this.mixQuantity,
     this.isHidden = false, // 🔹 По умолчанию товар видимый
   });
 
@@ -48,6 +51,8 @@ class Product {
       characteristics: _parseCharacteristics(map['characteristics']),
       efficiency: (map['efficiency'] as num?)?.toDouble() ?? 0.0,
       isHidden: map['isHidden'] ?? false, // 🔹 Загружаем из Firestore
+      mixQuantity:
+          (map['mixQuantity'] as num?)?.toDouble() ?? 1.0, // ✅ Теперь не `null`
     );
   }
 

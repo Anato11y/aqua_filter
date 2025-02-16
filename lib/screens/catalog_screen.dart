@@ -77,12 +77,12 @@ class CatalogScreen extends StatelessWidget {
 
             // 🔹 Фильтрация товаров по производительности
             if (categoryId == 'Установки ионообменные') {
-              print(
-                  '❌  systemPerformance($categoryId) ($systemPerformance) > efficiency ($efficiency)');
+              ///       print(
+              ///         '❌  systemPerformance($categoryId) ($systemPerformance) > efficiency ($efficiency)');
               if (systemPerformance > efficiency ||
                   efficiency > systemPerformance * 1.5) {
-                print(
-                    '❌ Товар скрыт: systemPerformance ($systemPerformance) > efficiency ($efficiency)');
+                ///          print(
+                ///              '❌ Товар скрыт: systemPerformance ($systemPerformance) > efficiency ($efficiency)');
 
                 return false;
               }

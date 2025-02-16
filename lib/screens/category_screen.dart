@@ -41,6 +41,7 @@ class _CategoryScreenState extends State<CategoryScreen> {
         title: const Text('Категории товаров',
             style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.blueAccent,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.science, color: Colors.white),
