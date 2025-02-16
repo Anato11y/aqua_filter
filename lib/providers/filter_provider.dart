@@ -3,8 +3,10 @@ import 'package:aqua_filter/models/water_analysis.dart';
 import 'package:flutter/material.dart';
 
 class FilterProvider extends ChangeNotifier {
+  /// Текущее состояние анализа воды
   WaterAnalysis waterAnalysis = getDefaultAnalysis();
 
+  /// Получаем значения анализа воды по умолчанию
   static WaterAnalysis getDefaultAnalysis() {
     return WaterAnalysis(
       iron: 0.3,
@@ -30,8 +32,24 @@ class FilterProvider extends ChangeNotifier {
     );
   }
 
+  /// Геттер, позволяющий понять, активны ли фильтры
+  bool get hasActiveFilters {
+    // Примерная логика: если хоть один из параметров (по которым фильтруем) больше 0 (или дефолтного значения), считаем, что фильтр активен
+    return (waterAnalysis.iron != null && waterAnalysis.iron! > 0) ||
+        (waterAnalysis.manganese != null && waterAnalysis.manganese! > 0) ||
+        (waterAnalysis.hardness != null && waterAnalysis.hardness! > 0) ||
+        (waterAnalysis.pmo != null && waterAnalysis.pmo! > 0) ||
+        (waterAnalysis.turbidity != null && waterAnalysis.turbidity! > 2.6) ||
+        (waterAnalysis.hydrogenSulfide != null &&
+            waterAnalysis.hydrogenSulfide! > 0.003);
+  }
+
+  /// Применяем фильтры к списку категорий
   List<Category> applyFilters(List<Category> categories) {
-    // 🔹 Категории, которые всегда должны оставаться
+    print('=== applyFilters ===');
+    print(
+        'Текущие параметры: turbidity=${waterAnalysis.turbidity}, H2S=${waterAnalysis.hydrogenSulfide}');
+    // Категории, которые должны показываться всегда
     List<String> alwaysVisibleCategories = [
       "Фильтры грубой очистки",
       "Фильтры предварительной очистки",
@@ -39,32 +57,37 @@ class FilterProvider extends ChangeNotifier {
     ];
 
     return categories.where((category) {
-      // ✅ Если категория в списке "обязательных" – показываем её всегда
+      // Если категория обязательная - показываем
       if (alwaysVisibleCategories.contains(category.name)) {
         return true;
       }
 
-      // ✅ Оставляем категорию, если хотя бы одно условие выполняется
-      if (category.name.contains("ионообмен") &&
+      // Логика фильтра:
+      // 1) Если в названии встречается "ионообмен" и жёсткость >= 3.0
+      if (category.name.toLowerCase().contains("ионообмен") &&
           waterAnalysis.hardness >= 3.0) {
-        return true; // Если жесткость >= 3.0, категорию оставляем
+        return true;
       }
 
-      if (category.name.contains("безреаген") &&
-          (waterAnalysis.turbidity > 5 ||
+      // 2) Если в названии "безреаген" и мутность >= 5 или H2S >= 0.003
+      if (category.name.toLowerCase().contains("безреаген") &&
+          (waterAnalysis.turbidity >= 5 ||
               waterAnalysis.hydrogenSulfide > 0.003)) {
-        return true; // Если мутность >= 5 **или** сероводород >= 0.003, категорию оставляем
+        return true;
       }
 
-      return false; // ❌ Если ни одно условие не выполняется, категорию скрываем
+      // Если ничего не подошло, исключаем
+      return false;
     }).toList();
   }
 
+  /// Устанавливаем пользовательские данные анализа
   void setFilters(WaterAnalysis analysis) {
     waterAnalysis = analysis;
     notifyListeners();
   }
 
+  /// Сбрасываем к дефолтному анализу
   void resetFilters() {
     waterAnalysis = getDefaultAnalysis();
     notifyListeners();

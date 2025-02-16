@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:aqua_filter/providers/filter_provider.dart';
-import 'package:aqua_filter/providers/cart_provider.dart'; // Добавляем CartProvider
+import 'package:aqua_filter/providers/cart_provider.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
@@ -15,19 +15,14 @@ class CategoryScreen extends StatefulWidget {
 }
 
 class _CategoryScreenState extends State<CategoryScreen> {
-  bool filtersApplied = false;
+  // УДАЛИЛИ: bool filtersApplied = false;
 
   void _resetToDefault() {
     final filterProvider = Provider.of<FilterProvider>(context, listen: false);
     setState(() {
-      filterProvider.resetFilters(); // 🔹 Сброс анализа воды
-      filtersApplied = false; // 🔹 Показываем все категории
-    });
-  }
-
-  void _applyFilters() {
-    setState(() {
-      filtersApplied = true; // 🔹 Применяем фильтры
+      // Сброс анализа воды в провайдере
+      filterProvider.resetFilters();
+      // Локальный флаг не нужен, так как проверяем hasActiveFilters
     });
   }
 
@@ -46,18 +41,23 @@ class _CategoryScreenState extends State<CategoryScreen> {
           IconButton(
             icon: const Icon(Icons.science, color: Colors.white),
             onPressed: () async {
+              // Переходим на экран анализа воды
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const WaterAnalysisScreen()),
               );
+              // Когда вернулись: проверяем, не нужно ли что-то обновить в UI
               if (result == true) {
-                _applyFilters(); // 🔹 Применяем фильтры после возврата
+                setState(() {
+                  // Просто вызываем setState, чтобы перестроить экран
+                  // filterProvider.hasActiveFilters вернёт true/false
+                });
               }
             },
           ),
           IconButton(
             icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _resetToDefault, // 🔹 Обновляем UI и сбрасываем анализ
+            onPressed: _resetToDefault,
           ),
         ],
       ),
@@ -81,9 +81,11 @@ class _CategoryScreenState extends State<CategoryScreen> {
             return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
           }).toList();
 
-          final filteredCategories = filtersApplied
-              ? filterProvider.applyFilters(categories)
-              : categories;
+          // Проверяем, активен ли анализ воды/фильтры
+          final hasFilters = filterProvider.hasActiveFilters;
+          // Если есть активные фильтры, фильтруем категории
+          final filteredCategories =
+              hasFilters ? filterProvider.applyFilters(categories) : categories;
 
           return GridView.builder(
             padding: const EdgeInsets.all(8.0),
