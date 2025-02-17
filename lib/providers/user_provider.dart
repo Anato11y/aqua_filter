@@ -12,7 +12,7 @@ class UserProvider with ChangeNotifier {
     _authStateChanges = _auth.authStateChanges();
     _authStateChanges.listen((User? newUser) {
       _user = newUser;
-      notifyListeners(); // ✅ Теперь обновление пользователя происходит автоматически
+      notifyListeners();
     });
   }
 

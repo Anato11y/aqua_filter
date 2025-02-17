@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
 import 'package:aqua_filter/models/product_model.dart';
 import 'package:aqua_filter/screens/login_screen.dart';
-import 'package:aqua_filter/screens/checkout_screen.dart'; // Страница оформления заказа
+import 'package:aqua_filter/screens/checkout_screen.dart';
 
 class CartScreen extends StatelessWidget {
   const CartScreen({super.key});
@@ -54,8 +54,7 @@ class CartScreen extends StatelessWidget {
                           cartProvider.items.keys.elementAt(index);
                       final Map<String, dynamic> cartItem =
                           cartProvider.items[productId]!;
-                      final Product product =
-                          cartItem['product']; // ✅ Получаем объект `Product`
+                      final Product product = cartItem['product'];
                       final int quantity = cartItem['quantity'];
 
                       return ListTile(
@@ -67,8 +66,7 @@ class CartScreen extends StatelessWidget {
                                 fit: BoxFit.cover,
                               )
                             : const Icon(Icons.image_not_supported),
-                        title: Text(
-                            product.name), // ✅ Теперь `product.name` работает
+                        title: Text(product.name),
                         subtitle: Text(
                             '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
                         trailing: Row(
@@ -127,7 +125,7 @@ class CartScreen extends StatelessWidget {
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.grey.shade300,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12)), // Закругление
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
                   'Оформить заказ',

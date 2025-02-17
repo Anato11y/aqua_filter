@@ -107,7 +107,7 @@ class CatalogScreen extends StatelessWidget {
               builder: (context, constraints) {
                 double maxWidth = constraints.maxWidth;
                 double cardWidth = 200;
-                int crossAxisCount = (maxWidth / cardWidth).floor();
+                (maxWidth / cardWidth).floor();
 
                 return GridView.builder(
                   itemCount: products.length,
@@ -115,13 +115,13 @@ class CatalogScreen extends StatelessWidget {
                     maxCrossAxisExtent: cardWidth,
                     crossAxisSpacing: 10,
                     mainAxisSpacing: 10,
-                    childAspectRatio: 0.55, // Увеличил высоту для кнопок
+                    childAspectRatio: 0.55,
                   ),
                   itemBuilder: (context, index) {
                     final product = products[index];
                     return ProductCard(
                       product: product,
-                      hideCartButton: hideCartButton, // <-- передаём флаг
+                      hideCartButton: hideCartButton,
                       onTap: () {
                         Navigator.push(
                           context,

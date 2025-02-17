@@ -23,8 +23,6 @@ class ProfileScreen extends StatelessWidget {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    print('🔹 Загружаем данные пользователя: ${user.uid}');
-
     return Scaffold(
       appBar: AppBar(
         title:
@@ -47,7 +45,6 @@ class ProfileScreen extends StatelessWidget {
               }
 
               if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
-                print('❌ Ошибка: Данные профиля не найдены в `users`');
                 return const Center(
                     child: Text('Ошибка загрузки данных профиля'));
               }
@@ -57,8 +54,6 @@ class ProfileScreen extends StatelessWidget {
               final bonusBalance =
                   (userData['bonusBalance'] as num?)?.toDouble() ?? 0.0;
               final displayName = userData['displayName'] ?? 'Имя не указано';
-
-              print('✅ Данные пользователя загружены: $userData');
 
               return Padding(
                 padding: const EdgeInsets.all(16.0),
@@ -111,20 +106,15 @@ class ProfileScreen extends StatelessWidget {
                 }
 
                 if (orderSnapshot.hasError) {
-                  print('❌ Ошибка загрузки заказов: ${orderSnapshot.error}');
                   return const Center(child: Text('Ошибка загрузки заказов'));
                 }
 
                 if (!orderSnapshot.hasData ||
                     orderSnapshot.data!.docs.isEmpty) {
-                  print('⚠️ Нет заказов для пользователя ${user.uid}');
                   return const Center(child: Text('У вас пока нет заказов'));
                 }
 
                 final orders = orderSnapshot.data!.docs;
-
-                print(
-                    '✅ Найдено ${orders.length} заказов для пользователя ${user.uid}');
 
                 return ListView.builder(
                   itemCount: orders.length,

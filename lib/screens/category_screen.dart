@@ -11,18 +11,15 @@ class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
 
   @override
-  _CategoryScreenState createState() => _CategoryScreenState();
+  CategoryScreenState createState() => CategoryScreenState();
 }
 
-class _CategoryScreenState extends State<CategoryScreen> {
-  // УДАЛИЛИ: bool filtersApplied = false;
-
+class CategoryScreenState extends State<CategoryScreen> {
   void _resetToDefault() {
     final filterProvider = Provider.of<FilterProvider>(context, listen: false);
     setState(() {
       // Сброс анализа воды в провайдере
       filterProvider.resetFilters();
-      // Локальный флаг не нужен, так как проверяем hasActiveFilters
     });
   }
 
@@ -46,12 +43,8 @@ class _CategoryScreenState extends State<CategoryScreen> {
                 context,
                 MaterialPageRoute(builder: (_) => const WaterAnalysisScreen()),
               );
-              // Когда вернулись: проверяем, не нужно ли что-то обновить в UI
               if (result == true) {
-                setState(() {
-                  // Просто вызываем setState, чтобы перестроить экран
-                  // filterProvider.hasActiveFilters вернёт true/false
-                });
+                setState(() {});
               }
             },
           ),
@@ -78,12 +71,10 @@ class _CategoryScreenState extends State<CategoryScreen> {
           }
 
           final categories = snapshot.data!.docs.map((doc) {
-            return Category.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+            return Category.fromMap(doc.data(), doc.id);
           }).toList();
 
-          // Проверяем, активен ли анализ воды/фильтры
           final hasFilters = filterProvider.hasActiveFilters;
-          // Если есть активные фильтры, фильтруем категории
           final filteredCategories =
               hasFilters ? filterProvider.applyFilters(categories) : categories;
 

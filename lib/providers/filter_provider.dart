@@ -26,7 +26,7 @@ class FilterProvider extends ChangeNotifier {
       sulfates: 500,
       numberOfResidents: 1,
       systemPerformance: 1.0,
-      dailyWaterConsumption: 100.0,
+      dailyWaterConsumption: 500.0,
       waterSource: "Водопровод",
       wellDepth: null,
     );
@@ -35,20 +35,16 @@ class FilterProvider extends ChangeNotifier {
   /// Геттер, позволяющий понять, активны ли фильтры
   bool get hasActiveFilters {
     // Примерная логика: если хоть один из параметров (по которым фильтруем) больше 0 (или дефолтного значения), считаем, что фильтр активен
-    return (waterAnalysis.iron != null && waterAnalysis.iron! > 0) ||
-        (waterAnalysis.manganese != null && waterAnalysis.manganese! > 0) ||
-        (waterAnalysis.hardness != null && waterAnalysis.hardness! > 0) ||
-        (waterAnalysis.pmo != null && waterAnalysis.pmo! > 0) ||
-        (waterAnalysis.turbidity != null && waterAnalysis.turbidity! > 2.6) ||
-        (waterAnalysis.hydrogenSulfide != null &&
-            waterAnalysis.hydrogenSulfide! > 0.003);
+    return (waterAnalysis.iron > 0) ||
+        (waterAnalysis.manganese > 0) ||
+        (waterAnalysis.hardness > 0) ||
+        (waterAnalysis.pmo > 0) ||
+        (waterAnalysis.turbidity > 2.6) ||
+        (waterAnalysis.hydrogenSulfide > 0.003);
   }
 
   /// Применяем фильтры к списку категорий
   List<Category> applyFilters(List<Category> categories) {
-    print('=== applyFilters ===');
-    print(
-        'Текущие параметры: turbidity=${waterAnalysis.turbidity}, H2S=${waterAnalysis.hydrogenSulfide}');
     // Категории, которые должны показываться всегда
     List<String> alwaysVisibleCategories = [
       "Фильтры грубой очистки",

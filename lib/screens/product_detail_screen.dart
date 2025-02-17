@@ -41,8 +41,6 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     if (loadCategory != null) {
       _fetchAvailableLoads(loadCategory);
     }
-
-    print('Категория товара: ${widget.product.categoryId}');
   }
 
   /// Загрузка доступных загрузок + фильтрация + сортировка
@@ -195,28 +193,21 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
 
     Map<String, String> loadChars =
         _parseCharacteristics(load['characteristics']);
-    print("📌 Загружаем характеристики загрузки: $loadChars");
     double capacity = _extractCapacity(loadChars);
-    print("⚠️ Извлечённая ёмкость: $capacity");
 
     if (capacity == 0) {
       return 'Неизвестно';
     }
-    print('Текущий categoryId: "${widget.product.categoryId}"');
-    print('Сравниваем с: "Установки фильтрации безреагентные"');
 
     final waterAnalysis =
         Provider.of<FilterProvider>(context, listen: false).waterAnalysis;
     double hardness = waterAnalysis.hardness;
-    double iron = waterAnalysis.iron ?? 0;
-    double manganese = waterAnalysis.manganese ?? 0;
-    double turbidity = waterAnalysis.turbidity ?? 0;
+    double iron = waterAnalysis.iron;
+    double manganese = waterAnalysis.manganese;
+    double turbidity = waterAnalysis.turbidity;
 
     // Ионообмен
-    print('Фильтроцикл: categoryId = ${widget.product.categoryId}');
-
     if (widget.product.categoryId == "Установки ионообменные") {
-      print('Обрабатываем ионообмен...');
       if (hardness == 0 && iron == 0 && manganese == 0) {
         return 'Неизвестно';
       }
@@ -228,7 +219,6 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
       return filterCycle.toStringAsFixed(1);
     } else if (widget.product.categoryId ==
         "Установки фильтрации безреагентные") {
-      print('Обрабатываем безреагент...');
       if (turbidity == 0 && iron == 0 && manganese == 0) {
         return 'Неизвестно';
       }
@@ -285,7 +275,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     } else if (characteristics is Map) {
       return Map.fromEntries(
-        (characteristics as Map).entries.map((entry) {
+        (characteristics).entries.map((entry) {
           String key = entry.key.trim();
           String value = entry.value.toString().trim();
           return MapEntry(key, value);
@@ -484,7 +474,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                             Provider.of<FilterProvider>(context, listen: false)
                                 .waterAnalysis;
                         double dailyWaterConsumption =
-                            waterAnalysis.dailyWaterConsumption ?? 0;
+                            waterAnalysis.dailyWaterConsumption;
                         int daysBetweenRegenerations = dailyWaterConsumption > 0
                             ? (filterCycle / dailyWaterConsumption).round()
                             : 0;

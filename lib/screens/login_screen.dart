@@ -60,9 +60,8 @@ class AuthScreenState extends State<AuthScreen> {
         'bonusBalance': 0.0,
         'orderHistory': [],
       });
-      print('✅ Новый пользователь добавлен в Firestore: ${user.uid}');
     } catch (e) {
-      print('❌ Ошибка при создании пользователя в Firestore: $e');
+      debugPrint('❌ Ошибка при создании пользователя в Firestore: $e');
     }
   }
 

@@ -83,7 +83,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
 
       String? paymentUrl;
       if (finalAmount > 0) {
-        print('🔹 Запуск оплаты через YooKassa на сумму $finalAmount ₽');
         paymentUrl = await YooKassaService.makePayment(finalAmount, 'RUB');
         if (paymentUrl == null) {
           throw Exception('Ошибка оплаты через YooKassa');
@@ -111,15 +110,10 @@ class CheckoutScreenState extends State<CheckoutScreen> {
         }).toList(),
       };
 
-      final orderRef =
-          await FirebaseFirestore.instance.collection('orders').add(orderData);
-      print('✅ Заказ сохранён в orders/${orderRef.id}');
-
       final userRef =
           FirebaseFirestore.instance.collection('users').doc(user.uid);
       await userRef.update(
           {'bonusBalance': _userBonusBalance - bonusUsed + bonusEarned});
-      print('✅ Бонусы обновлены: -$bonusUsed + $bonusEarned');
 
       cartProvider.clearCart();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -127,19 +121,13 @@ class CheckoutScreenState extends State<CheckoutScreen> {
       );
 
       if (paymentUrl != null) {
-        print('🔹 Открываем страницу оплаты: $paymentUrl');
         final Uri paymentUri = Uri.parse(paymentUrl);
         if (await launchUrl(paymentUri, mode: LaunchMode.externalApplication)) {
-          print('✅ URL открыт успешно');
-        } else {
-          print('❌ Не удалось открыть ссылку');
-        }
+        } else {}
       } else {
         Navigator.pop(context);
       }
-    } catch (e, stackTrace) {
-      print('❌ Ошибка оформления заказа: $e');
-      print(stackTrace);
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка заказа: $e')),
       );
