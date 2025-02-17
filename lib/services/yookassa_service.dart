@@ -35,18 +35,13 @@ class YooKassaService {
         body: jsonEncode(body),
       );
 
-      print('🔹 Код ответа: ${response.statusCode}');
-      print('🔹 Ответ сервера: ${response.body}');
-
       if (response.statusCode == 200 || response.statusCode == 201) {
         final responseData = jsonDecode(response.body);
         return responseData['confirmation']['confirmation_url'];
       } else {
-        print('❌ Ошибка создания платежа: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('❌ Исключение при запросе: $e');
       return null;
     }
   }

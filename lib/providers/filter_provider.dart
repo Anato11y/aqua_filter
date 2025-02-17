@@ -53,7 +53,7 @@ class FilterProvider extends ChangeNotifier {
     List<String> alwaysVisibleCategories = [
       "Фильтры грубой очистки",
       "Фильтры предварительной очистки",
-      "Фильтры для дома"
+      "Фильтры тонкой очистки"
     ];
 
     return categories.where((category) {

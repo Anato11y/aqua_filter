@@ -18,6 +18,7 @@ class Category {
   final double sulfatesThreshold;
   final String waterSource;
   final String imageUrl;
+  final int order;
 
   Category({
     required this.id,
@@ -39,6 +40,7 @@ class Category {
     required this.sulfatesThreshold,
     required this.waterSource,
     required this.imageUrl,
+    required this.order,
   });
 
   factory Category.fromMap(Map<String, dynamic> map, String id) {
@@ -77,6 +79,7 @@ class Category {
       sulfatesThreshold:
           (map['sulfatesThreshold'] as num?)?.toDouble() ?? double.infinity,
       waterSource: map['waterSource'] ?? "Любой",
+      order: (map['order'] as num?)?.toInt() ?? 0,
     );
   }
 }

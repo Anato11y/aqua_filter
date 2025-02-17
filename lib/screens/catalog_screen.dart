@@ -41,6 +41,11 @@ class CatalogScreen extends StatelessWidget {
     final filterProvider = Provider.of<FilterProvider>(context);
     final waterAnalysis = filterProvider.waterAnalysis;
 
+    // Если категория — «Установки ионообменные» или «Установки фильтрации безреагентные»,
+    // убираем кнопку "В корзину".
+    final bool hideCartButton = (categoryId == 'Установки ионообменные' ||
+        categoryId == 'Установки фильтрации безреагентные');
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -69,6 +74,7 @@ class CatalogScreen extends StatelessWidget {
                 child: Text('В этой категории пока нет товаров'));
           }
 
+          // Преобразуем документы Firestore в список Product
           final products = snapshot.data!.docs.map((doc) {
             return Product.fromMap(doc.data() as Map<String, dynamic>, doc.id);
           }).where((product) {
@@ -77,17 +83,12 @@ class CatalogScreen extends StatelessWidget {
 
             // 🔹 Фильтрация товаров по производительности
             if (categoryId == 'Установки ионообменные') {
-              ///       print(
-              ///         '❌  systemPerformance($categoryId) ($systemPerformance) > efficiency ($efficiency)');
               if (systemPerformance > efficiency ||
                   efficiency > systemPerformance * 1.5) {
-                ///          print(
-                ///              '❌ Товар скрыт: systemPerformance ($systemPerformance) > efficiency ($efficiency)');
-
                 return false;
               }
             }
-            // 🔹 Фильтрация для грубой очистки (новое условие с коэффициентом 2)
+            // 🔹 Фильтрация для грубой очистки
             else if (categoryId == 'Фильтры грубой очистки') {
               if (systemPerformance > efficiency ||
                   efficiency > systemPerformance * 5) {
@@ -117,6 +118,7 @@ class CatalogScreen extends StatelessWidget {
                     final product = products[index];
                     return ProductCard(
                       product: product,
+                      hideCartButton: hideCartButton, // <-- передаём флаг
                       onTap: () {
                         Navigator.push(
                           context,
