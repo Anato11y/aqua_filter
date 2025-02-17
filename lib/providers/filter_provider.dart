@@ -70,7 +70,8 @@ class FilterProvider extends ChangeNotifier {
       }
 
       // 2) Если в названии "безреаген" и мутность >= 5 или H2S >= 0.003
-      if (category.name.toLowerCase().contains("безреаген") &&
+      if ((category.name.toLowerCase().contains("безреаген") ||
+              category.name.toLowerCase().contains("обезжелез")) &&
           (waterAnalysis.turbidity >= 5 ||
               waterAnalysis.hydrogenSulfide > 0.003)) {
         return true;

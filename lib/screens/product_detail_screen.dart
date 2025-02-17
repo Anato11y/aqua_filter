@@ -18,9 +18,9 @@ class ProductDetailScreen extends StatefulWidget {
 }
 
 class ProductDetailScreenState extends State<ProductDetailScreen> {
-  int quantity = 0; // Текущее количество товара в корзине
-  String? selectedLoad; // Выбранная загрузка
-  List<Map<String, dynamic>> availableLoads = []; // Доступные загрузки
+  int quantity = 0;
+  String? selectedLoad;
+  List<Map<String, dynamic>> availableLoads = [];
 
   @override
   void didChangeDependencies() {
@@ -28,7 +28,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     quantity = (cartProvider.items[widget.product.id]?['quantity'] ?? 0) as int;
 
-    // Определяем категорию загрузок, исходя из категории товара
+    // Определяем категорию загрузок
     String? loadCategory;
     if (widget.product.categoryId == "Установки ионообменные") {
       loadCategory = "Ионообменные смолы";
@@ -37,7 +37,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
       loadCategory = "Загрузки осветления и обезжелезивания";
     }
 
-    // Если категорию нашли, загружаем доступные варианты
+    // Если нашли — получаем варианты
     if (loadCategory != null) {
       _fetchAvailableLoads(loadCategory);
     }
@@ -45,14 +45,13 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     print('Категория товара: ${widget.product.categoryId}');
   }
 
-  /// Загрузка доступных загрузок из Firestore + фильтрация + сортировка
+  /// Загрузка доступных загрузок + фильтрация + сортировка
   Future<void> _fetchAvailableLoads(String loadCategory) async {
     QuerySnapshot snapshot = await FirebaseFirestore.instance
         .collection('products')
         .where('categoryId', isEqualTo: loadCategory)
         .get();
 
-    // Преобразуем данные документов в список Map
     List<Map<String, dynamic>> loads = snapshot.docs.map((doc) {
       var data = doc.data() as Map<String, dynamic>;
       return {
@@ -70,13 +69,10 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
 
     if (mounted) {
       setState(() {
-        // Сначала фильтрация (чтобы исключить те, у которых лимиты ниже анализа)
+        // 1) Фильтруем
         availableLoads = loads.where(_filterLoads).toList();
 
-        // Затем сортировка
-        // В коде ниже сохранён твой исходный принцип сортировки,
-        // где ты сравниваешь стоимость (или можешь сравнить иначе).
-        // Если нужно — дополни логику, сейчас сортируем по общей цене для конкретного баллона.
+        // 2) Сортируем по общей цене (если нужно)
         String? tankSize = _extractTankSize(
             _parseCharacteristics(widget.product.characteristics));
         if (tankSize != null) {
@@ -85,56 +81,57 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
             int loadQuantityB = _getLoadQuantity(tankSize, b['loading']);
             double totalCostA = (loadQuantityA * (a['price'] ?? 0)).toDouble();
             double totalCostB = (loadQuantityB * (b['price'] ?? 0)).toDouble();
-            print(
-                'Сравнение загрузок: ${a['name']} ($totalCostA ₽) vs ${b['name']} ($totalCostB ₽)');
-            // Сортируем от меньшей к большей стоимости
             return totalCostA.compareTo(totalCostB);
           });
 
-          // Выбираем первую в списке по умолчанию
           if (availableLoads.isNotEmpty) {
             selectedLoad = availableLoads.first['name'];
-            print('Выбранная загрузка по умолчанию: $selectedLoad');
           }
         }
-
-        print('Доступные загрузки: $availableLoads');
       });
     }
   }
 
-  /// Фильтрация: если хоть один из лимитов меньше, чем значение анализа — исключаем.
+  /// Разделённая логика: ионообменные vs безреагентные
   bool _filterLoads(Map<String, dynamic> load) {
     final waterAnalysis =
         Provider.of<FilterProvider>(context, listen: false).waterAnalysis;
-
     Map<String, String> loadChars =
         _parseCharacteristics(load['characteristics']);
 
-    double ironLimit =
-        _extractLimit(loadChars["Железо двухвалентное, мг/л, до"]);
-    double manganeseLimit = _extractLimit(loadChars["Марганец, мг/л, до"]);
-    double hardnessLimit = _extractLimit(loadChars["Жесткость, °Ж, до"]);
-    double pmoLimit = _extractLimit(loadChars["ПмО, мг О2/л,"]);
+    if (widget.product.categoryId == "Установки ионообменные") {
+      // Ионообмен: 4 лимита
+      double ironLimit =
+          _extractLimit(loadChars["Железо двухвалентное, мг/л, до"]);
+      double manganeseLimit = _extractLimit(loadChars["Марганец, мг/л, до"]);
+      double hardnessLimit = _extractLimit(loadChars["Жесткость, °Ж, до"]);
+      double pmoLimit = _extractLimit(loadChars["ПмО, мг О2/л,"]);
 
-    print('Фильтрация загрузки: ${load['name']}');
-    print(
-        'Лимиты загрузки: железо=$ironLimit, марганец=$manganeseLimit, жесткость=$hardnessLimit, ПмО=$pmoLimit');
-    print(
-        'Данные анализа: железо=${waterAnalysis.iron}, марганец=${waterAnalysis.manganese}, жесткость=${waterAnalysis.hardness}, ПмО=${waterAnalysis.pmo}');
+      // Всё <= лимитов
+      return (waterAnalysis.iron <= ironLimit) &&
+          (waterAnalysis.manganese <= manganeseLimit) &&
+          (waterAnalysis.hardness <= hardnessLimit) &&
+          (waterAnalysis.pmo <= pmoLimit);
+    } else if (widget.product.categoryId ==
+        "Установки фильтрации безреагентные") {
+      // Безреаг: 3 лимита (Fe, Mn, PmO)
+      double ironLimit =
+          _extractLimit(loadChars["Железо двухвалентное, мг/л, до"]);
+      double manganeseLimit = _extractLimit(loadChars["Марганец, мг/л, до"]);
+      double pmoLimit = _extractLimit(loadChars["ПмО, мг О2/л,"]);
 
-    // Если анализное значение больше лимита, значит лимит меньше, чем нужно => исключаем
-    // Возвращаем true только если все анализные <= лимитов
-    return (waterAnalysis.iron <= ironLimit) &&
-        (waterAnalysis.manganese <= manganeseLimit) &&
-        (waterAnalysis.hardness <= hardnessLimit) &&
-        (waterAnalysis.pmo <= pmoLimit);
+      return (waterAnalysis.iron <= ironLimit) &&
+          (waterAnalysis.manganese <= manganeseLimit) &&
+          (waterAnalysis.pmo <= pmoLimit);
+    } else {
+      // Другие категории — не фильтруем
+      return true;
+    }
   }
 
-  /// Извлечение числового предела из строки
+  /// Преобразуем строку с лимитом в double
   double _extractLimit(String? value) {
     if (value != null && value.isNotEmpty) {
-      // Удаляем все, кроме цифр, точки и запятой
       String numericValue =
           value.replaceAll(RegExp(r'[^\d,.]'), '').replaceAll(',', '.');
       return double.tryParse(numericValue) ?? double.infinity;
@@ -142,33 +139,26 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     return double.infinity;
   }
 
-  /// Расчёт производительности (номинал, максимум) для баллона
+  /// Расчёт производительности (номинал, макс)
   Map<String, String> calculatePerformance(String tankSize, String? flowRate) {
-    print('Расчет производительности для размера баллона: $tankSize');
-
     if (flowRate == null || !flowRate.contains('-')) {
-      print('Ошибка: некорректный формат скорости потока "$flowRate"');
       return {"nominal": "Неизвестно", "max": "Неизвестно"};
     }
 
-    // Очищаем от лишних символов, оставляем цифры, точку, дефис
     flowRate = flowRate.replaceAll(RegExp(r'[^\d.-]'), '');
-    List<String> flowParts = flowRate.split('-').map((e) => e.trim()).toList();
-    if (flowParts.length < 2) {
-      print('Ошибка: Скорость потока должна иметь мин и макс через дефис');
+    List<String> parts = flowRate.split('-').map((e) => e.trim()).toList();
+    if (parts.length < 2) {
       return {"nominal": "Неизвестно", "max": "Неизвестно"};
     }
 
-    double minFlow = double.tryParse(flowParts[0]) ?? 0;
-    double maxFlow = double.tryParse(flowParts[1]) ?? 0;
+    double minFlow = double.tryParse(parts[0]) ?? 0;
+    double maxFlow = double.tryParse(parts[1]) ?? 0;
     if (minFlow == 0 && maxFlow == 0) {
-      print('Ошибка: Скорость потока не преобразуется в число');
       return {"nominal": "Неизвестно", "max": "Неизвестно"};
     }
 
     double diameter = tankDiameters[tankSize] ?? 0;
     if (diameter == 0) {
-      print('Ошибка: Диаметр баллона "$tankSize" не найден в словаре');
       return {"nominal": "Неизвестно", "max": "Неизвестно"};
     }
 
@@ -179,7 +169,6 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     double nominalPerformance = nominalFlow * area;
     double maxPerformance = maxFlow * area;
 
-    print('Номинал: $nominalPerformance м³/ч, Макс: $maxPerformance м³/ч');
     return {
       "nominal": nominalPerformance.toStringAsFixed(1),
       "max": maxPerformance.toStringAsFixed(1),
@@ -189,13 +178,11 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
   /// Расчёт фильтроцикла
   String calculateFilterCycle(Map<String, dynamic> load, String? tankSize) {
     if (tankSize == null) {
-      print('Ошибка: Размер баллона не определен');
       return 'Неизвестно';
     }
 
     int loadQuantity = _getLoadQuantity(tankSize, load['loading']);
     if (loadQuantity == 0) {
-      print('Ошибка: Количество загрузки для "$tankSize" = 0');
       return 'Неизвестно';
     }
 
@@ -203,71 +190,79 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     double volumePerBag = _extractVolumeFromName(loadName);
     double totalVolume = volumePerBag * loadQuantity;
     if (totalVolume == 0) {
-      print('Ошибка: Общий объем загрузки = 0');
       return 'Неизвестно';
     }
 
     Map<String, String> loadChars =
         _parseCharacteristics(load['characteristics']);
+    print("📌 Загружаем характеристики загрузки: $loadChars");
     double capacity = _extractCapacity(loadChars);
+    print("⚠️ Извлечённая ёмкость: $capacity");
+
     if (capacity == 0) {
-      print('Ошибка: Обменная емкость = 0');
       return 'Неизвестно';
     }
+    print('Текущий categoryId: "${widget.product.categoryId}"');
+    print('Сравниваем с: "Установки фильтрации безреагентные"');
 
     final waterAnalysis =
         Provider.of<FilterProvider>(context, listen: false).waterAnalysis;
-    double hardness = waterAnalysis.hardness ?? 0;
+    double hardness = waterAnalysis.hardness;
     double iron = waterAnalysis.iron ?? 0;
     double manganese = waterAnalysis.manganese ?? 0;
+    double turbidity = waterAnalysis.turbidity ?? 0;
 
-    if (hardness == 0 && iron == 0 && manganese == 0) {
-      print('Ошибка: Нет данных анализа (Fe, Mn, Жесткость)');
+    // Ионообмен
+    print('Фильтроцикл: categoryId = ${widget.product.categoryId}');
+
+    if (widget.product.categoryId == "Установки ионообменные") {
+      print('Обрабатываем ионообмен...');
+      if (hardness == 0 && iron == 0 && manganese == 0) {
+        return 'Неизвестно';
+      }
+      double denominator = hardness + 2 * manganese + 1.37 * iron;
+      if (denominator == 0) {
+        return 'Неизвестно';
+      }
+      double filterCycle = (capacity * totalVolume) / denominator;
+      return filterCycle.toStringAsFixed(1);
+    } else if (widget.product.categoryId ==
+        "Установки фильтрации безреагентные") {
+      print('Обрабатываем безреагент...');
+      if (turbidity == 0 && iron == 0 && manganese == 0) {
+        return 'Неизвестно';
+      }
+      double denom = (turbidity / 1.75) + manganese + iron;
+      if (denom == 0) {
+        return 'Неизвестно';
+      }
+      double filterCycle = (capacity * totalVolume) / denom;
+      return filterCycle.toStringAsFixed(1);
+    } else {
       return 'Неизвестно';
     }
-
-    double denominator = hardness + 2 * manganese + 1.37 * iron;
-    if (denominator == 0) {
-      print('Ошибка: Знаменатель формулы = 0');
-      return 'Неизвестно';
-    }
-
-    double filterCycle = (capacity * totalVolume) / denominator;
-    print('Фильтроцикл: $filterCycle л');
-
-    return filterCycle.toStringAsFixed(1);
   }
 
-  /// Извлечение объёма (л) из названия загрузки
   double _extractVolumeFromName(String name) {
     RegExp regex = RegExp(r'(\d+[\.,]?\d*)\s*л', caseSensitive: false);
     Match? match = regex.firstMatch(name);
-
     if (match != null) {
       String volumeStr = match.group(1)?.replaceAll(',', '.') ?? '0';
-      double volume = double.tryParse(volumeStr) ?? 0;
-      print('Извлеченный объём: $volume л');
-      return volume;
+      return double.tryParse(volumeStr) ?? 0;
     }
-
-    print('Ошибка: объём (л) не найден в "$name"');
     return 0;
   }
 
-  /// Извлечение обменной емкости
   double _extractCapacity(Map<String, String> characteristics) {
     String? capacityStr = characteristics["Емкость, мг-экв/л"];
     if (capacityStr == null || capacityStr.isEmpty) {
-      print('Ошибка: нет ключа "Емкость, мг-экв/л"');
       return 0;
     }
-    double capacity =
+    double val =
         double.tryParse(capacityStr.replaceAll(RegExp(r'[^\d.]'), '')) ?? 0;
-    print('Извлечена обменная емкость: $capacity мг-экв/л');
-    return capacity;
+    return val;
   }
 
-  /// Парсинг loading (количество загрузки для баллона)
   Map<String, int> _parseLoading(dynamic loading) {
     if (loading is List) {
       return Map.fromIterable(
@@ -280,7 +275,6 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     return {};
   }
 
-  /// Парсинг characteristics
   Map<String, String> _parseCharacteristics(dynamic characteristics) {
     if (characteristics is List) {
       return Map.fromIterable(
@@ -301,24 +295,20 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
     return {};
   }
 
-  /// Извлечение размера баллона
   String? _extractTankSize(Map<String, String> characteristics) {
     return characteristics["Размер баллона"];
   }
 
-  /// Определение количества загрузки для нужного размера баллона
   int _getLoadQuantity(String tankSize, Map<String, int> load) {
     if (load.containsKey(tankSize)) {
       return load[tankSize] ?? 0;
     }
-    print('Ошибка: нет размера "$tankSize" в загрузке');
     return 0;
   }
 
-  /// Подсчёт общей цены (товар + загрузка)
+  /// Подсчёт итоговой цены (товар + загрузка)
   double _calculateTotalPrice() {
     double totalPrice = widget.product.price;
-
     if (selectedLoad != null) {
       var load = availableLoads.firstWhere(
         (l) => l['name'] == selectedLoad,
@@ -328,23 +318,12 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
       if (load.isNotEmpty) {
         String? tankSize = _extractTankSize(
             _parseCharacteristics(widget.product.characteristics));
-        print('Размер баллона: $tankSize');
-
         if (tankSize == null) {
-          print('Ошибка: нет "Размер баллона"');
           return totalPrice;
         }
 
         int loadQuantity = _getLoadQuantity(tankSize, load['loading']);
-        print('Количество загрузки: $loadQuantity');
-
-        if (loadQuantity == 0) {
-          print('Ошибка: Количество = 0 для "$tankSize"');
-        }
-
         totalPrice += loadQuantity * (load['price'] ?? 0);
-        print('Цена загрузки: ${(load['price'] ?? 0)} ₽');
-        print('Общая цена = $totalPrice ₽');
       }
     }
     return totalPrice;
@@ -353,10 +332,8 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
-
     Map<String, String> productCharacteristics =
         _parseCharacteristics(widget.product.characteristics);
-
     String? tankSize = _extractTankSize(productCharacteristics);
 
     return Scaffold(
@@ -407,6 +384,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Картинка
               Center(
                 child: Image.network(
                   widget.product.imageUrl,
@@ -415,17 +393,20 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               const SizedBox(height: 20),
+              // Название
               Text(
                 widget.product.name,
                 style:
                     const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
+              // Цена
               Text(
                 '${_calculateTotalPrice().toStringAsFixed(2)} ₽',
                 style: const TextStyle(fontSize: 18, color: Colors.green),
               ),
               const SizedBox(height: 10),
+              // Описание
               ExpansionTile(
                 title: const Text(
                   'Описание',
@@ -443,32 +424,31 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                 ],
               ),
               const SizedBox(height: 10),
+              // Характеристики
               ExpansionTile(
                 title: const Text(
                   'Характеристики',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                children: widget.product.characteristics
-                    .map(
-                      (char) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check, color: Colors.blueAccent),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                char,
-                                style: const TextStyle(fontSize: 16),
-                              ),
-                            ),
-                          ],
+                children: widget.product.characteristics.map((char) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check, color: Colors.blueAccent),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            char,
+                            style: const TextStyle(fontSize: 16),
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      ],
+                    ),
+                  );
+                }).toList(),
               ),
-              // Показ списка доступных загрузок, если он не пуст
+              // Список доступных загрузок
               if (availableLoads.isNotEmpty)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -481,56 +461,44 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                     ),
                     Column(
                       children: availableLoads.map((load) {
-                        // Извлекаем скорость потока
+                        // Скорость потока
                         String? flowRate = load['characteristics'] is Map
                             ? (_parseCharacteristics(load['characteristics'])[
                                     "Скорость потока в режиме фильтрации, м/ч"] ??
                                 '')
                             : '';
 
-                        // Считаем производительность
+                        // Рассчитываем производительность (min/max)
                         Map<String, String> performance =
                             calculatePerformance(tankSize ?? '', flowRate);
 
-                        // Считаем фильтроцикл
+                        // Фильтроцикл
                         String filterCycleStr =
                             calculateFilterCycle(load, tankSize);
                         double filterCycle = double.tryParse(
                                 filterCycleStr.replaceAll(',', '.')) ??
                             0;
 
-                        // Определяем, на сколько дней хватит (округляем)
+                        // Сколько дней
                         final waterAnalysis =
                             Provider.of<FilterProvider>(context, listen: false)
                                 .waterAnalysis;
                         double dailyWaterConsumption =
                             waterAnalysis.dailyWaterConsumption ?? 0;
-
                         int daysBetweenRegenerations = dailyWaterConsumption > 0
                             ? (filterCycle / dailyWaterConsumption).round()
                             : 0;
+                        int roundedDays = daysBetweenRegenerations.isFinite
+                            ? daysBetweenRegenerations
+                            : 0;
 
-                        // Для безопасности, если это Infinity, заменим на 0
-                        int roundedDaysBetweenRegenerations =
-                            daysBetweenRegenerations.isFinite
-                                ? daysBetweenRegenerations
-                                : 0;
-
-                        // Лог для отладки
-                        print('Цикл фильтрации: $filterCycle м³');
-                        print(
-                            'Суточное потребление: $dailyWaterConsumption м³');
-                        print(
-                            'Дней между регенерациями: $daysBetweenRegenerations');
-
-                        // Выводим RadioListTile
                         return RadioListTile(
                           title: Text(
                             "${load['name']} (${load['price']} ₽ x "
                             "${_getLoadQuantity(tankSize ?? '', load['loading'])} меш. = "
                             "${(_getLoadQuantity(tankSize ?? '', load['loading']) * (load['price'] ?? 0)).toStringAsFixed(2)} ₽)\n"
-                            "Произв. (ном./макс): ${performance['nominal'] ?? 'Неизвестно'} - ${performance['max'] ?? 'Неизвестно'} м³/ч\n"
-                            "Фильтроцикл: $filterCycle л ($roundedDaysBetweenRegenerations дней)",
+                            "Произв. (ном./макс): ${performance['nominal'] ?? '?'} - ${performance['max'] ?? '?'} м³/ч\n"
+                            "Фильтроцикл: $filterCycle л ($roundedDays дней)",
                           ),
                           value: load['name'],
                           groupValue: selectedLoad,
@@ -538,7 +506,6 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                             if (mounted) {
                               setState(() {
                                 selectedLoad = value;
-                                print('Выбрана загрузка: $selectedLoad');
                               });
                             }
                           },
@@ -551,6 +518,7 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
           ),
         ),
       ),
+      // Кнопка «В КОРЗИНУ»
       bottomNavigationBar: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         decoration: BoxDecoration(
@@ -566,33 +534,22 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
               final cartProvider =
                   Provider.of<CartProvider>(context, listen: false);
 
-              // Добавляем сам товар
+              // Добавляем основной товар
               cartProvider.addItem(widget.product, 1);
-              print('Основной товар добавлен: ${widget.product.name}');
 
-              // Если выбрана загрузка, добавим её
+              // Добавляем выбранную загрузку (если есть)
               if (selectedLoad != null) {
                 var load = availableLoads.firstWhere(
                   (l) => l['name'] == selectedLoad,
                   orElse: () => {},
                 );
-
                 if (load.isNotEmpty) {
                   String? tankSize = _extractTankSize(
                       _parseCharacteristics(widget.product.characteristics));
-                  print('Размер баллона при добавлении: $tankSize');
-
-                  if (tankSize == null) {
-                    print(
-                        'Ошибка: Размер баллона не указан в характеристиках!');
-                  } else {
+                  if (tankSize != null) {
                     int loadQuantity =
                         _getLoadQuantity(tankSize, load['loading']);
-                    print('Количество загрузки: $loadQuantity');
-
-                    if (loadQuantity == 0) {
-                      print('Ошибка: Кол-во загрузки для "$tankSize" = 0');
-                    } else {
+                    if (loadQuantity != 0) {
                       double loadPrice = (load['price'] ?? 0).toDouble();
                       double totalLoadCost = loadQuantity * loadPrice;
 
@@ -612,24 +569,17 @@ class ProductDetailScreenState extends State<ProductDetailScreen> {
                         );
 
                         cartProvider.addItem(loadProduct, 1);
-                        print('Загрузка добавлена: ${loadProduct.name}');
                       }
                     }
                   }
                 }
               }
 
-              // Переходим на MainScreen
               if (mounted) {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (context) => const MainScreen()),
                 );
-                print('Переход на MainScreen выполнен');
-              }
-
-              if (mounted) {
-                print('Товаров в корзине: ${cartProvider.totalItems}');
               }
             },
             style: ElevatedButton.styleFrom(

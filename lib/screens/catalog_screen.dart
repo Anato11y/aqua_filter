@@ -87,11 +87,14 @@ class CatalogScreen extends StatelessWidget {
                   efficiency > systemPerformance * 1.5) {
                 return false;
               }
-            }
-            // 🔹 Фильтрация для грубой очистки
-            else if (categoryId == 'Фильтры грубой очистки') {
+            } else if (categoryId == 'Фильтры грубой очистки') {
               if (systemPerformance > efficiency ||
                   efficiency > systemPerformance * 5) {
+                return false;
+              }
+            } else if (categoryId == 'Установки фильтрации безреагентные') {
+              if (systemPerformance > efficiency ||
+                  efficiency > systemPerformance * 1.3) {
                 return false;
               }
             }
