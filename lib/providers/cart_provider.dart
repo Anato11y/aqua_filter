@@ -88,8 +88,8 @@ class CartProvider with ChangeNotifier {
     };
 
     // Сохранение заказа в Firestore
-    final orderRef = FirebaseFirestore.instance.collection('orders').doc();
-    await orderRef.set(orderData);
+    //  final orderRef = FirebaseFirestore.instance.collection('orders').doc();
+    //  await orderRef.set(orderData);
 
     // Обновляем бонусный баланс пользователя
     final userRef =

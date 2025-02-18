@@ -20,13 +20,15 @@ class OnboardingScreenState extends State<OnboardingScreen> {
   // Данные для экранов настройки
   List<Map<String, String>> onboardingData = [
     {
-      'title': 'Выбирайте фильтры',
-      'description': 'Наши фильтры очистят вашу воду!',
+      'title': 'Выбирайте фильтры за несколько кликов',
+      'description':
+          'Категории и товары обновляются в зависимости от результатов анализа!',
       'image': 'assets/images/step1.jpg'
     },
     {
       'title': 'Получайте бонусы',
-      'description': 'За каждую покупку вы получаете бонусы!',
+      'description':
+          'За каждую покупку начисляются бонусы. Копите и оплачивайте ими следующие заказы!',
       'image': 'assets/images/step2.jpg'
     },
     {

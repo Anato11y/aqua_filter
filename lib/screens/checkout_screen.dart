@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
 import 'package:aqua_filter/screens/login_screen.dart';
+import 'package:aqua_filter/screens/profile_screen.dart'; // <-- профиль с историей заказов
 import 'package:aqua_filter/services/yookassa_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,13 +17,16 @@ class CheckoutScreen extends StatefulWidget {
 
 class CheckoutScreenState extends State<CheckoutScreen> {
   final _formKey = GlobalKey<FormState>();
+
   String _name = '';
   String _phone = '';
   String _address = '';
   String _deliveryMethod = 'Курьер';
+
   bool _useBonuses = false;
   double _bonusToUse = 0.0;
   double _userBonusBalance = 0.0;
+
   bool _isProcessing = false;
 
   @override
@@ -31,7 +35,7 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     _loadUserBonuses();
   }
 
-  /// ✅ **Загрузка бонусного баланса пользователя**
+  /// ✅ Загрузка бонусов
   Future<void> _loadUserBonuses() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -46,7 +50,7 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  /// ✅ **Проверка авторизации**
+  /// ✅ Проверка авторизации
   Future<bool> _checkAuth() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -59,7 +63,7 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     return true;
   }
 
-  /// ✅ **Оформление заказа**
+  /// ✅ Оформление заказа
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
@@ -74,13 +78,22 @@ class CheckoutScreenState extends State<CheckoutScreen> {
       return;
     }
 
-    setState(() => _isProcessing = true);
-    try {
-      double totalAmount = cartProvider.totalAmount;
-      double bonusUsed = _useBonuses ? _bonusToUse : 0.0;
-      double finalAmount = totalAmount - bonusUsed;
-      double bonusEarned = totalAmount * 0.05;
+    if (cartProvider.items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка: Ваша корзина пуста!')),
+      );
+      return;
+    }
 
+    setState(() => _isProcessing = true);
+
+    try {
+      final double totalAmount = cartProvider.totalAmount;
+      final double bonusUsed = _useBonuses ? _bonusToUse : 0.0;
+      final double finalAmount = totalAmount - bonusUsed;
+      final double bonusEarned = totalAmount * 0.05;
+
+      // Генерация ссылки оплаты, если finalAmount > 0
       String? paymentUrl;
       if (finalAmount > 0) {
         paymentUrl = await YooKassaService.makePayment(finalAmount, 'RUB');
@@ -110,23 +123,42 @@ class CheckoutScreenState extends State<CheckoutScreen> {
         }).toList(),
       };
 
-      final userRef =
-          FirebaseFirestore.instance.collection('users').doc(user.uid);
-      await userRef.update(
-          {'bonusBalance': _userBonusBalance - bonusUsed + bonusEarned});
+      // Сохраняем заказ
+      final orderRef =
+          await FirebaseFirestore.instance.collection('orders').add(orderData);
 
+      // Обновляем бонусный баланс
+      final double newBonusBalance =
+          _userBonusBalance - bonusUsed + bonusEarned;
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .update({'bonusBalance': newBonusBalance});
+
+      // Очищаем корзину
       cartProvider.clearCart();
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Заказ успешно оформлен!')),
+        SnackBar(
+          content: Text(
+            'Заказ оформлен! Начислено бонусов: ${bonusEarned.toStringAsFixed(2)} ₽',
+          ),
+        ),
       );
 
       if (paymentUrl != null) {
+        // Открываем ссылку
         final Uri paymentUri = Uri.parse(paymentUrl);
-        if (await launchUrl(paymentUri, mode: LaunchMode.externalApplication)) {
-        } else {}
-      } else {
-        Navigator.pop(context);
+        // Результат true/false: удалось ли открыть ссылку
+        await launchUrl(paymentUri, mode: LaunchMode.externalApplication);
       }
+
+      // Всегда после оплаты (или без оплаты) переходим в профиль
+      Navigator.pop(context); // Закрыть CheckoutScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const ProfileScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Ошибка заказа: $e')),
@@ -147,91 +179,98 @@ class CheckoutScreenState extends State<CheckoutScreen> {
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Выберите способ доставки:',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            ListTile(
-              title: const Text('Курьер'),
-              leading: Radio(
-                value: 'Курьер',
-                groupValue: _deliveryMethod,
-                onChanged: (value) => setState(() => _deliveryMethod = value!),
-              ),
-            ),
-            ListTile(
-              title: const Text('Самовывоз'),
-              leading: Radio(
-                value: 'Самовывоз',
-                groupValue: _deliveryMethod,
-                onChanged: (value) => setState(() => _deliveryMethod = value!),
-              ),
-            ),
-            Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Ваше имя'),
-                    validator: (value) =>
-                        value!.isNotEmpty ? null : 'Введите имя',
-                    onSaved: (value) => _name = value!,
-                  ),
-                  const SizedBox(height: 10),
-                  TextFormField(
-                    decoration: const InputDecoration(labelText: 'Телефон'),
-                    keyboardType: TextInputType.phone,
-                    validator: (value) => value != null && value.length >= 10
-                        ? null
-                        : 'Введите корректный номер',
-                    onSaved: (value) => _phone = value!,
-                  ),
-                  if (_deliveryMethod == 'Курьер')
-                    TextFormField(
-                      decoration:
-                          const InputDecoration(labelText: 'Адрес доставки'),
-                      validator: (value) =>
-                          value!.isNotEmpty ? null : 'Введите адрес',
-                      onSaved: (value) => _address = value!,
-                    ),
-                ],
-              ),
-            ),
-            SwitchListTile(
-              title: Text(
-                  'Использовать бонусы (Доступно: ${_userBonusBalance.toStringAsFixed(2)} ₽)'),
-              value: _useBonuses,
-              onChanged: (bool value) {
-                setState(() {
-                  _useBonuses = value;
-                  _bonusToUse = _useBonuses ? _userBonusBalance : 0.0;
-                });
-              },
-            ),
-            const SizedBox(height: 20),
-            Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.blueAccent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Выберите способ доставки:',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+
+              // Радиокнопки
+              ListTile(
+                title: const Text('Курьер'),
+                leading: Radio(
+                  value: 'Курьер',
+                  groupValue: _deliveryMethod,
+                  onChanged: (value) =>
+                      setState(() => _deliveryMethod = value!),
                 ),
-                onPressed: _isProcessing
-                    ? null
-                    : () async {
-                        if (await _checkAuth()) _submitOrder();
-                      },
-                child: _isProcessing
-                    ? const CircularProgressIndicator(color: Colors.white)
-                    : const Text('Подтвердить заказ',
-                        style: TextStyle(color: Colors.white)),
               ),
-            ),
-          ],
+              ListTile(
+                title: const Text('Самовывоз'),
+                leading: Radio(
+                  value: 'Самовывоз',
+                  groupValue: _deliveryMethod,
+                  onChanged: (value) =>
+                      setState(() => _deliveryMethod = value!),
+                ),
+              ),
+
+              // Поля ввода
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Ваше имя'),
+                validator: (value) =>
+                    (value == null || value.isEmpty) ? 'Введите имя' : null,
+                onSaved: (value) => _name = value ?? '',
+              ),
+              const SizedBox(height: 10),
+              TextFormField(
+                decoration: const InputDecoration(labelText: 'Телефон'),
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.length < 10) {
+                    return 'Введите корректный номер';
+                  }
+                  return null;
+                },
+                onSaved: (value) => _phone = value ?? '',
+              ),
+              if (_deliveryMethod == 'Курьер')
+                TextFormField(
+                  decoration:
+                      const InputDecoration(labelText: 'Адрес доставки'),
+                  validator: (value) =>
+                      (value == null || value.isEmpty) ? 'Введите адрес' : null,
+                  onSaved: (value) => _address = value ?? '',
+                ),
+
+              const SizedBox(height: 10),
+              Text(
+                'Доступные бонусы: ${_userBonusBalance.toStringAsFixed(2)} ₽',
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+
+              SwitchListTile(
+                title: const Text('Использовать бонусы'),
+                value: _useBonuses,
+                onChanged: (bool value) {
+                  setState(() {
+                    _useBonuses = value;
+                    _bonusToUse = _useBonuses ? _userBonusBalance : 0.0;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 20),
+
+              Center(
+                child: ElevatedButton(
+                  onPressed: _isProcessing
+                      ? null
+                      : () async {
+                          if (await _checkAuth()) {
+                            _submitOrder();
+                          }
+                        },
+                  child: _isProcessing
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : const Text('Подтвердить заказ'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
