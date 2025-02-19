@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:aqua_filter/providers/cart_provider.dart';
 import 'package:aqua_filter/screens/login_screen.dart';
-import 'package:aqua_filter/screens/profile_screen.dart'; // <-- профиль с историей заказов
+import 'package:aqua_filter/screens/profile_screen.dart';
 import 'package:aqua_filter/services/yookassa_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -35,7 +35,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     _loadUserBonuses();
   }
 
-  /// ✅ Загрузка бонусов
   Future<void> _loadUserBonuses() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -50,7 +49,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     }
   }
 
-  /// ✅ Проверка авторизации
   Future<bool> _checkAuth() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -63,21 +61,18 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     return true;
   }
 
-  /// ✅ Оформление заказа
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
     _formKey.currentState!.save();
 
     final cartProvider = Provider.of<CartProvider>(context, listen: false);
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ошибка: Пользователь не авторизован!')),
       );
       return;
     }
-
     if (cartProvider.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Ошибка: Ваша корзина пуста!')),
@@ -86,7 +81,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
     }
 
     setState(() => _isProcessing = true);
-
     try {
       final double totalAmount = cartProvider.totalAmount;
       final double bonusUsed = _useBonuses ? _bonusToUse : 0.0;
@@ -123,11 +117,10 @@ class CheckoutScreenState extends State<CheckoutScreen> {
         }).toList(),
       };
 
-      // Сохраняем заказ
-      final orderRef =
-          await FirebaseFirestore.instance.collection('orders').add(orderData);
+      // Сохраняем заказ с авто-генерируемым ID
+      await FirebaseFirestore.instance.collection('orders').add(orderData);
 
-      // Обновляем бонусный баланс
+      // Обновляем бонусный баланс пользователя
       final double newBonusBalance =
           _userBonusBalance - bonusUsed + bonusEarned;
       await FirebaseFirestore.instance
@@ -135,26 +128,20 @@ class CheckoutScreenState extends State<CheckoutScreen> {
           .doc(user.uid)
           .update({'bonusBalance': newBonusBalance});
 
-      // Очищаем корзину
       cartProvider.clearCart();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Заказ оформлен! Начислено бонусов: ${bonusEarned.toStringAsFixed(2)} ₽',
-          ),
-        ),
+            content: Text(
+                'Заказ оформлен! Начислено бонусов: ${bonusEarned.toStringAsFixed(2)} ₽')),
       );
 
       if (paymentUrl != null) {
-        // Открываем ссылку
         final Uri paymentUri = Uri.parse(paymentUrl);
-        // Результат true/false: удалось ли открыть ссылку
         await launchUrl(paymentUri, mode: LaunchMode.externalApplication);
       }
 
-      // Всегда после оплаты (или без оплаты) переходим в профиль
-      Navigator.pop(context); // Закрыть CheckoutScreen
+      Navigator.pop(context); // Закрываем CheckoutScreen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const ProfileScreen()),
@@ -186,8 +173,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
             children: [
               const Text('Выберите способ доставки:',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-
-              // Радиокнопки
               ListTile(
                 title: const Text('Курьер'),
                 leading: Radio(
@@ -206,8 +191,6 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                       setState(() => _deliveryMethod = value!),
                 ),
               ),
-
-              // Поля ввода
               TextFormField(
                 decoration: const InputDecoration(labelText: 'Ваше имя'),
                 validator: (value) =>
@@ -234,14 +217,12 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                       (value == null || value.isEmpty) ? 'Введите адрес' : null,
                   onSaved: (value) => _address = value ?? '',
                 ),
-
               const SizedBox(height: 10),
               Text(
                 'Доступные бонусы: ${_userBonusBalance.toStringAsFixed(2)} ₽',
                 style:
                     const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
-
               SwitchListTile(
                 title: const Text('Использовать бонусы'),
                 value: _useBonuses,
@@ -252,9 +233,7 @@ class CheckoutScreenState extends State<CheckoutScreen> {
                   });
                 },
               ),
-
               const SizedBox(height: 20),
-
               Center(
                 child: ElevatedButton(
                   onPressed: _isProcessing

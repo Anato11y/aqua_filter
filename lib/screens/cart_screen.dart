@@ -11,15 +11,12 @@ class CartScreen extends StatelessWidget {
 
   void _checkout(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
-
     if (user == null) {
-      // ❌ Если пользователь не авторизован, перенаправляем на страницу входа
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const AuthScreen()),
       );
     } else {
-      // ✅ Если авторизован, переходим к оформлению заказа
       Navigator.push(
         context,
         MaterialPageRoute(builder: (context) => const CheckoutScreen()),
@@ -30,7 +27,6 @@ class CartScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cartProvider = Provider.of<CartProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Корзина', style: TextStyle(color: Colors.white)),
@@ -56,16 +52,17 @@ class CartScreen extends StatelessWidget {
                           cartProvider.items[productId]!;
                       final Product product = cartItem['product'];
                       final int quantity = cartItem['quantity'];
-
                       return ListTile(
-                        leading: product.imageUrl.isNotEmpty
-                            ? Image.network(
-                                product.imageUrl,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              )
-                            : const Icon(Icons.image_not_supported),
+                        leading: SizedBox(
+                          width: 50,
+                          height: 50,
+                          child: product.imageUrl.isNotEmpty
+                              ? Image.network(
+                                  product.imageUrl,
+                                  fit: BoxFit.cover,
+                                )
+                              : const Icon(Icons.image_not_supported),
+                        ),
                         title: Text(product.name),
                         subtitle: Text(
                             '${product.price.toStringAsFixed(2)} ₽ x $quantity'),
@@ -111,8 +108,7 @@ class CartScreen extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: SizedBox(
-              width:
-                  MediaQuery.of(context).size.width * 0.8, // 80% ширины экрана
+              width: MediaQuery.of(context).size.width * 0.8,
               child: ElevatedButton(
                 onPressed: cartProvider.items.isNotEmpty
                     ? () => _checkout(context)

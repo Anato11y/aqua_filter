@@ -8,41 +8,36 @@ class CartProvider with ChangeNotifier {
 
   Map<String, Map<String, dynamic>> get items => _items;
 
-  /// Подсчет общего количества товаров в корзине
   int get totalItems => _items.values.fold(
         0,
-        (sum, item) => sum + (item['quantity'] as num).toInt(),
+        (sum, item) => sum + (item['quantity'] as int),
       );
 
-  /// Подсчет общей суммы заказа
   double get totalAmount => _items.entries.fold(
         0,
         (sum, entry) =>
             sum +
-            (entry.value['product'].price *
-                (entry.value['quantity'] as num).toInt()),
+            (entry.value['product'].price * (entry.value['quantity'] as int)),
       );
 
-  /// Добавление товара в корзину
   void addItem(Product product, int quantity) {
     if (_items.containsKey(product.id)) {
       _items[product.id]!['quantity'] =
-          (_items[product.id]!['quantity'] as num).toInt() + quantity;
+          (_items[product.id]!['quantity'] as int) + quantity;
     } else {
       _items[product.id] = {
         'product': product,
-        'quantity': quantity.toInt(),
+        'quantity': quantity,
       };
     }
     notifyListeners();
   }
 
-  /// Удаление товара
   void removeItem(String productId) {
     if (_items.containsKey(productId)) {
-      if ((_items[productId]!['quantity'] as num).toInt() > 1) {
+      if ((_items[productId]!['quantity'] as int) > 1) {
         _items[productId]!['quantity'] =
-            (_items[productId]!['quantity'] as num).toInt() - 1;
+            (_items[productId]!['quantity'] as int) - 1;
       } else {
         _items.remove(productId);
       }
@@ -50,57 +45,53 @@ class CartProvider with ChangeNotifier {
     }
   }
 
-  /// Очистка корзины
   void clearCart() {
     _items.clear();
     notifyListeners();
   }
 
-  /// Проверка наличия товаров из категории в корзине
   bool isCategoryInCart(String categoryId) {
     return _items.values.any((item) {
       final product = item['product'] as Product;
-      return product.categoryId == categoryId; // Сравниваем ID категории
+      return product.categoryId == categoryId;
     });
   }
 
-  /// Метод оформления заказа
+  /// Оформление заказа с использованием авто-генерируемого ID.
+  /// Логика номера заказа (orderNumber) реализуется на стороне Firestore (например, через Cloud Function).
   Future<void> placeOrder() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
     final totalPrice = totalAmount;
-    final bonusEarned = totalPrice * 0.05; // 5% бонусов
+    final bonusEarned = totalPrice * 0.05;
+    final itemsList = _items.values.map((item) {
+      return {
+        'productId': item['product'].id,
+        'name': item['product'].name,
+        'price': item['product'].price,
+        'quantity': item['quantity'],
+      };
+    }).toList();
 
     final orderData = {
       'userId': user.uid,
       'totalAmount': totalPrice,
       'bonusEarned': bonusEarned,
-      'date': DateTime.now().millisecondsSinceEpoch,
-      'items': _items.values.map((item) {
-        return {
-          'productId': item['product'].id,
-          'name': item['product'].name,
-          'price': item['product'].price,
-          'quantity': item['quantity'],
-        };
-      }).toList(),
+      'date': Timestamp.now(),
+      'items': itemsList,
     };
 
-    // Сохранение заказа в Firestore
-    //  final orderRef = FirebaseFirestore.instance.collection('orders').doc();
-    //  await orderRef.set(orderData);
+    // Создание заказа с авто-генерируемым ID
+    await FirebaseFirestore.instance.collection('orders').add(orderData);
 
     // Обновляем бонусный баланс пользователя
     final userRef =
         FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final userData = await userRef.get();
-    final currentBonus = (userData.data()?['bonusBalance'] ?? 0.0) as double;
-
-    await userRef.update({
-      'bonusBalance': currentBonus + bonusEarned,
-      'orderHistory': FieldValue.arrayUnion([orderData]),
-    });
+    final userSnapshot = await userRef.get();
+    final currentBonus =
+        (userSnapshot.data()?['bonusBalance'] ?? 0.0) as double;
+    await userRef.update({'bonusBalance': currentBonus + bonusEarned});
 
     clearCart();
   }

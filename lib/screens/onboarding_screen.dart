@@ -1,23 +1,16 @@
 import 'package:aqua_filter/screens/main_scrin.dart';
 import 'package:flutter/material.dart';
 
-// Определение класса OnboardingScreen как StatefulWidget
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
-
   @override
   OnboardingScreenState createState() => OnboardingScreenState();
 }
 
-// Состояние (State) для OnboardingScreen
 class OnboardingScreenState extends State<OnboardingScreen> {
-  // Создание PageController для управления PageView
   final PageController _pageController = PageController(initialPage: 0);
-
-  // Текущая страница в PageView
   int _currentPage = 0;
 
-  // Данные для экранов настройки
   List<Map<String, String>> onboardingData = [
     {
       'title': 'Выбирайте фильтры за несколько кликов',
@@ -41,9 +34,7 @@ class OnboardingScreenState extends State<OnboardingScreen> {
   void _skipOnboarding() {
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(
-          builder: (context) =>
-              const MainScreen()), // ✅ Теперь переходим на MainScreen
+      MaterialPageRoute(builder: (context) => const MainScreen()),
     );
   }
 
@@ -52,55 +43,59 @@ class OnboardingScreenState extends State<OnboardingScreen> {
     return Scaffold(
       body: Column(
         children: [
-          const SizedBox(height: 40), // Небольшой отступ сверху
-
-          // PageView для отображения слайдов настройки
           Expanded(
-            child: PageView.builder(
-              controller: _pageController,
-              itemCount: onboardingData.length,
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
+            child: NotificationListener<ScrollNotification>(
+              onNotification: (notification) {
+                if (notification is OverscrollNotification &&
+                    _currentPage == onboardingData.length - 1) {
+                  _skipOnboarding();
+                }
+                return false;
               },
-              itemBuilder: (context, index) {
-                return Column(
-                  children: [
-                    // Изображение для текущего слайда
-                    Expanded(
-                      child: Image.asset(
-                        onboardingData[index]['image']!,
-                        fit: BoxFit
-                            .scaleDown, // Используем BoxFit.scaleDown для адаптивного отображения
-                        width: double.infinity,
-                      ),
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: onboardingData.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  return Align(
+                    alignment: Alignment.topCenter,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Container(
+                          height: MediaQuery.of(context).size.height * 0.55,
+                          child: Image.asset(
+                            onboardingData[index]['image']!,
+                            fit: BoxFit.cover,
+                            width: double.infinity,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          onboardingData[index]['title']!,
+                          style: const TextStyle(
+                              fontSize: 24, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          onboardingData[index]['description']!,
+                          style: const TextStyle(fontSize: 16),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
-                    const SizedBox(
-                        height: 20), // Отступ между изображением и текстом
-                    // Заголовок для текущего слайда
-                    Text(
-                      onboardingData[index]['title']!,
-                      style: const TextStyle(
-                          fontSize: 24, fontWeight: FontWeight.bold),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 10),
-                    // Описание для текущего слайда
-                    Text(
-                      onboardingData[index]['description']!,
-                      style: const TextStyle(fontSize: 16),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
-
-          const SizedBox(height: 80), // Отступ перед индикаторами
-
-          // Индикаторы страниц
+          const SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
@@ -126,30 +121,20 @@ class OnboardingScreenState extends State<OnboardingScreen> {
               ),
             ),
           ),
-
-          const SizedBox(
-              height: 40), // Увеличенный отступ перед кнопкой "Пропустить"
-
-          // Кнопка "Пропустить"
+          const SizedBox(height: 30),
           SizedBox(
-            width: MediaQuery.of(context).size.width * 0.8, // 80% ширины экрана
+            width: MediaQuery.of(context).size.width * 0.8,
             child: ElevatedButton(
               onPressed: _skipOnboarding,
               style: ElevatedButton.styleFrom(
-                padding:
-                    const EdgeInsets.symmetric(vertical: 16), // Высота кнопки
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)), // Закругление
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text(
-                'Пропустить',
-                style: TextStyle(fontSize: 18),
-              ),
+              child: const Text('Пропустить', style: TextStyle(fontSize: 18)),
             ),
           ),
-
-          const SizedBox(
-              height: 50), // 🔥 Увеличенный отступ перед нижним краем
+          const SizedBox(height: 30),
         ],
       ),
     );

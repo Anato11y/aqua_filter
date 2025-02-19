@@ -9,17 +9,18 @@ import 'package:aqua_filter/providers/cart_provider.dart';
 
 class CategoryScreen extends StatefulWidget {
   const CategoryScreen({super.key});
-
   @override
   CategoryScreenState createState() => CategoryScreenState();
 }
 
 class CategoryScreenState extends State<CategoryScreen> {
+  bool _ignoreFilters = false;
+
   void _resetToDefault() {
     final filterProvider = Provider.of<FilterProvider>(context, listen: false);
+    filterProvider.resetFilters();
     setState(() {
-      // Сброс анализа воды в провайдере
-      filterProvider.resetFilters();
+      _ignoreFilters = true;
     });
   }
 
@@ -27,7 +28,6 @@ class CategoryScreenState extends State<CategoryScreen> {
   Widget build(BuildContext context) {
     final filterProvider = Provider.of<FilterProvider>(context);
     final cartProvider = Provider.of<CartProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Категории товаров',
@@ -38,13 +38,14 @@ class CategoryScreenState extends State<CategoryScreen> {
           IconButton(
             icon: const Icon(Icons.science, color: Colors.white),
             onPressed: () async {
-              // Переходим на экран анализа воды
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const WaterAnalysisScreen()),
               );
               if (result == true) {
-                setState(() {});
+                setState(() {
+                  _ignoreFilters = false;
+                });
               }
             },
           ),
@@ -69,15 +70,13 @@ class CategoryScreenState extends State<CategoryScreen> {
           if (snapshot.data!.docs.isEmpty) {
             return const Center(child: Text('Категорий пока нет'));
           }
-
-          final categories = snapshot.data!.docs.map((doc) {
-            return Category.fromMap(doc.data(), doc.id);
-          }).toList();
-
-          final hasFilters = filterProvider.hasActiveFilters;
+          final categories = snapshot.data!.docs
+              .map((doc) => Category.fromMap(doc.data(), doc.id))
+              .toList();
           final filteredCategories =
-              hasFilters ? filterProvider.applyFilters(categories) : categories;
-
+              (!_ignoreFilters && filterProvider.hasActiveFilters)
+                  ? filterProvider.applyFilters(categories)
+                  : categories;
           return GridView.builder(
             padding: const EdgeInsets.all(8.0),
             gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -91,7 +90,6 @@ class CategoryScreenState extends State<CategoryScreen> {
               final category = filteredCategories[index];
               final isCategoryInCart =
                   cartProvider.isCategoryInCart(category.id);
-
               return CategoryCard(
                 category: category,
                 isInCart: isCategoryInCart,
